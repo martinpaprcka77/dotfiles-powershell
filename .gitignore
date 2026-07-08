@@ -1,0 +1,15 @@
+# Secrets
+*.secret
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Generated/cache
+*.log
