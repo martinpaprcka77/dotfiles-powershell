@@ -22,3 +22,8 @@ Write-Host @"
 ║  Uptime: $($uptimeStr.PadRight(33)) ║
 ╚══════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
+
+# Windows Terminal enhanced profile (zoxide, CTT utils, PSReadLine colors, Show-Help)
+# Guarded internally by $env:WT_SESSION
+$wtProfile = Join-Path $env:DOTFILES_PWSH 'hosts\wtprofile.ps1'
+if (Test-Path $wtProfile) { . $wtProfile }
