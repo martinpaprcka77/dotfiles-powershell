@@ -43,6 +43,25 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine | Sort-Object Version 
     Set-PSReadLineKeyHandler -Chord 'Alt+d'  -Function DeleteWord
     Set-PSReadLineKeyHandler -Chord 'Ctrl+z' -Function Undo
     Set-PSReadLineKeyHandler -Chord 'Ctrl+y' -Function Redo
+
+    # ── History scrubbing — prevent secrets from being saved ──
+    # Patterns to detect: API keys, tokens, passwords, connection strings
+    $sensitivePatterns = @(
+        '(?i)(api.?key|token|secret|password|credential)\s*[=:]\s*\S+',
+        '(?i)(Bearer\s+\S+)',
+        '(?i)(connect.*-Password\s+\S+)',
+        '(?i)(Set-Secret|Set-SecretInfo)\s',
+        '(?i)(export\s+.*TOKEN)'
+    )
+    Set-PSReadLineOption -AddToHistoryHandler {
+        param($command)
+        foreach ($pattern in $sensitivePatterns) {
+            if ($command -match $pattern) {
+                return $false  # Don't save to history
+            }
+        }
+        return $true
+    }
 }
 
 # ═══════════════════════════════════════════════════════════════

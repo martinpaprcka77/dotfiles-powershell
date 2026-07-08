@@ -153,6 +153,13 @@ success_symbol = "[❯](bold green)"
 error_symbol = "[❯](bold red)"
 vicmd_symbol = "[❮](bold green)"
 
+# Transient prompt — collapses to just `❯ ` after command execution
+# Reduces visual noise. Disable: set enabled = false
+[transient_prompt]
+enabled = true
+newline = false
+format = "[❯](bold green) "
+
 [nodejs]
 format = "via [🐍 $version](bold green) "
 
