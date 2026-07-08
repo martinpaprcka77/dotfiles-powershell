@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerShell Dotfiles Ecosystem</title>
+<style>
+  :root { --bg: #0d1117; --fg: #c9d1d9; --accent: #58a6ff; --border: #30363d; --code-bg: #161b22; --green: #3fb950; --orange: #d2991d; --red: #f85149; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: .5rem; margin-bottom: .5rem; }
+  h2 { font-size: 1.4rem; margin: 2rem 0 .5rem; border-bottom: 1px solid var(--border); padding-bottom: .3rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 .3rem; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); padding: .15em .4em; border-radius: 4px; font-size: .9em; }
+  pre { background: var(--code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; margin: .5rem 0; }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: .5rem 0 1rem; }
+  th, td { border: 1px solid var(--border); padding: .5rem .75rem; text-align: left; font-size: .9em; }
+  th { background: var(--code-bg); }
+  .badge { display: inline-block; padding: .15em .6em; border-radius: 12px; font-size: .75em; font-weight: 600; margin: .2em; }
+  .badge-blue { background: #1f6feb33; color: #58a6ff; border: 1px solid #1f6feb66; }
+  .badge-green { background: #23863633; color: #3fb950; border: 1px solid #23863666; }
+  .badge-orange { background: #9e6a0333; color: #d2991d; border: 1px solid #9e6a0366; }
+  .badge-gray { background: #6e768133; color: #8b949e; border: 1px solid #6e768166; }
+  .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  .card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .card h3 { margin-top: 0; }
+  .hero { font-size: 1.1rem; color: #8b949e; margin-bottom: 1.5rem; }
+  .tag { background: var(--accent); color: #000; padding: .1em .5em; border-radius: 4px; font-size: .8em; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>⚡ PowerShell Dotfiles Ecosystem</h1>
+<p class="hero">Modular, version-controlled, portable — profiles and tools that bypass OneDrive and work across machines.</p>
+
+<p>
+  <a class="badge badge-blue" href="https://github.com/martinpaprcka77/dotfiles-powershell">repo: powershell</a>
+  <a class="badge badge-orange" href="https://github.com/martinpaprcka77/dotfiles-tools">repo: tools</a>
+  <a class="badge badge-green" href="https://martinpaprcka77.github.io/dotfiles-powershell/">pages: powershell</a>
+  <a class="badge badge-green" href="https://martinpaprcka77.github.io/dotfiles-tools/">pages: tools</a>
+  <a class="badge badge-gray" href="https://gist.github.com/martinpaprcka77/bafc2457fd9d93daf1b1b69c348e0cfd">gist: install</a>
+  <a class="badge badge-gray" href="https://gist.github.com/martinpaprcka77/b30ae161dfb693431a438e309f236467">gist: cheatsheet</a>
+</p>
+
+<h2>🚀 One-Liner Install</h2>
+<pre><code>git clone https://github.com/martinpaprcka77/dotfiles-powershell.git $HOME/.config/powershell
+git clone https://github.com/martinpaprcka77/dotfiles-tools.git $HOME/Projects/tools
+&amp; $HOME/.config/powershell/install.ps1</code></pre>
+<p>Restart PowerShell → <code>menu</code> + <code>check</code> ready.</p>
+
+<h2>🗺️ Repo Boundary</h2>
+<table>
+<tr><th></th><th>dotfiles-powershell</th><th>dotfiles-tools</th></tr>
+<tr><td><strong>Location</strong></td><td><code>~/.config/powershell/</code></td><td><code>~/Projects/tools/</code></td></tr>
+<tr><td><strong>Purpose</strong></td><td>Profile orchestration</td><td>Menu &amp; diagnostics</td></tr>
+<tr><td><strong>Module</strong></td><td>—</td><td><code>Toolkit</code> (18 functions)</td></tr>
+<tr><td><strong>Key scripts</strong></td><td><code>profile.ps1</code> · <code>install.ps1</code> · <code>update.ps1</code></td><td><code>menu.ps1</code> · <code>check.ps1</code> · <code>configure.ps1</code></td></tr>
+<tr><td><strong>Tests</strong></td><td>—</td><td>25+ Pester cases</td></tr>
+<tr><td><strong>Pages</strong></td><td><a href="https://martinpaprcka77.github.io/dotfiles-powershell/">github.io/dotfiles-powershell</a></td><td><a href="https://martinpaprcka77.github.io/dotfiles-tools/">github.io/dotfiles-tools</a></td></tr>
+</table>
+
+<h2>🧩 UML: Profile Loading</h2>
+<img src="https://mermaid.ink/img/..." alt="Mermaid UML diagram rendered on GitHub" style="display:none">
+<p><em>Mermaid diagrams render on the <a href="https://github.com/martinpaprcka77/dotfiles-powershell#-architecture-uml">GitHub README</a> page.</em></p>
+
+<h2>📋 Quick Command Reference</h2>
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>menu</code></td><td>Interactive main menu (Docker, Git, System, Tools)</td></tr>
+<tr><td><code>check</code></td><td>Full system diagnostics</td></tr>
+<tr><td><code>update</code></td><td>Git pull latest + reload profile</td></tr>
+<tr><td><code>configure</code></td><td>Interactive setup wizard</td></tr>
+<tr><td><code>ep</code></td><td>Edit profile</td></tr>
+<tr><td><code>rp</code></td><td>Reload profile</td></tr>
+</table>
+
+<p><strong>Git:</strong> <code>g</code> <code>gst</code> <code>gco</code> <code>gbr</code> <code>gcm</code> <code>gpl</code> <code>gps</code> <code>glo</code> &nbsp;|&nbsp;
+<strong>Docker:</strong> <code>dps</code> <code>dpsa</code> <code>dcu</code> <code>dcd</code></p>
+
+<h2>📚 Documentation</h2>
+
+<div class="summary">
+<div class="card">
+<h3>dotfiles-powershell</h3>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-powershell#readme">📄 README</a> — overview, install, function reference</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-powershell/blob/main/docs/ARCHITECTURE.md">🧩 ARCHITECTURE</a> — 4 Mermaid UML diagrams</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-powershell/blob/main/docs/PURPOSE.md">🎯 PURPOSE</a> — design rationale, 5 decisions</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-powershell/blob/main/docs/PROMPT.md">📝 PROMPT</a> — original AI prompt (107 lines)</p>
+</div>
+<div class="card">
+<h3>dotfiles-tools</h3>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools#readme">📄 README</a> — all 18 functions, UML diagrams</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools/blob/main/docs/ARCHITECTURE.md">🧩 ARCHITECTURE</a> — 6 Mermaid UML diagrams</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools/blob/main/docs/MANUAL.md">📖 MANUAL</a> — 11-section user guide</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools/blob/main/docs/ROADMAP.md">🗺️ ROADMAP</a> — 5 phases, known issues</p>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools/blob/main/docs/PROMPT.md">📝 PROMPT</a> — original AI prompt</p>
+</div>
+</div>
+
+<h2>🗺️ Roadmap</h2>
+<table>
+<tr><th>Phase</th><th>Status</th><th>Items</th></tr>
+<tr><td><strong>1. Foundation</strong></td><td>✅ Done</td><td>Modular profile, install, Toolkit (18 funcs), menus, diagnostics, WT, tests</td></tr>
+<tr><td><strong>2. Tools</strong></td><td>🟡 Planned</td><td>Custom user tools, menu extensions</td></tr>
+<tr><td><strong>3. Extensions</strong></td><td>🟡 Planned</td><td>Linux/macOS, health check, live dashboard</td></tr>
+<tr><td><strong>4. Integration</strong></td><td>🟢 Future</td><td>VS Code, WSL, oh-my-posh theme, git hooks</td></tr>
+<tr><td><strong>5. Ecosystem</strong></td><td>🟢 Future</td><td>Windows installer, CI/CD, PS Gallery</td></tr>
+</table>
+<p><a href="https://github.com/martinpaprcka77/dotfiles-tools/blob/main/docs/ROADMAP.md">→ Full roadmap</a></p>
+
+<h2>⚡ All Links</h2>
+<table>
+<tr><th>Resource</th><th>URL</th></tr>
+<tr><td><strong>dotfiles-powershell</strong></td><td><a href="https://github.com/martinpaprcka77/dotfiles-powershell">github.com/martinpaprcka77/dotfiles-powershell</a></td></tr>
+<tr><td><strong>dotfiles-tools</strong></td><td><a href="https://github.com/martinpaprcka77/dotfiles-tools">github.com/martinpaprcka77/dotfiles-tools</a></td></tr>
+<tr><td><strong>Pages (powershell)</strong></td><td><a href="https://martinpaprcka77.github.io/dotfiles-powershell/">martinpaprcka77.github.io/dotfiles-powershell</a></td></tr>
+<tr><td><strong>Pages (tools)</strong></td><td><a href="https://martinpaprcka77.github.io/dotfiles-tools/">martinpaprcka77.github.io/dotfiles-tools</a></td></tr>
+<tr><td><strong>Gist — Install</strong></td><td><a href="https://gist.github.com/martinpaprcka77/bafc2457fd9d93daf1b1b69c348e0cfd">gist.github.com/…/bafc2457</a></td></tr>
+<tr><td><strong>Gist — Cheatsheet</strong></td><td><a href="https://gist.github.com/martinpaprcka77/b30ae161dfb693431a438e309f236467">gist.github.com/…/b30ae16</a></td></tr>
+</table>
+
+<hr style="margin:2rem 0;border-color:var(--border)">
+<p style="color:#8b949e;font-size:.85em">Built with PowerShell · Git · GitHub Pages · Mermaid</p>
+
+</body>
+</html>
