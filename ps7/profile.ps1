@@ -33,8 +33,17 @@ if (Get-Module -ListAvailable -Name Terminal-Icons) {
 }
 #endregion
 
-#region oh-my-posh
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
+#region Starship prompt (cross-shell, Rust-powered)
+# oh-my-posh alternative: https://starship.rs
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    $starshipConfig = Join-Path $env:DOTFILES_PWSH 'starship.toml'
+    if (Test-Path $starshipConfig) {
+        $env:STARSHIP_CONFIG = $starshipConfig
+    }
+    Invoke-Expression (&starship init powershell)
+}
+elseif (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
+    # Fallback: oh-my-posh if starship not installed
     $poshTheme = Join-Path $env:DOTFILES_PWSH 'theme.json'
     if (Test-Path $poshTheme) {
         oh-my-posh init pwsh --config $poshTheme | Invoke-Expression
