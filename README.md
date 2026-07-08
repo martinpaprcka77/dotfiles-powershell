@@ -99,12 +99,18 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 ├── core/
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
 │   ├── functions.ps1        ← Edit-Profile, Reload-Profile, Get-SecretKey, mkcd
-│   └── env.ps1              ← $env:EDITOR, PATH, DOTFILES_TOOLS
+│   ├── env.ps1              ← $env:EDITOR, PATH, DOTFILES_TOOLS
+│   ├── perf.ps1             ← Measure-Profile, Clear-PSCache, Optimize-ModuleLoading
+│   ├── status.ps1           ← Show-Status — global health dashboard
+│   └── extra.ps1.example    ← template for user overrides (copy to extra.ps1)
+├── starship.toml             ← Starship prompt config (30+ modules)
 ├── ps5/profile.ps1          ← Windows PowerShell 5.1
-├── ps7/profile.ps1          ← PSReadLine v3, Terminal-Icons, oh-my-posh, PSFzf
+├── ps7/profile.ps1          ← Starship, PSReadLine, Terminal-Icons, PSFzf
 ├── hosts/
-│   ├── ConsoleHost.ps1      ← window title, welcome banner with uptime
-│   └── VSCode.ps1           ← UTF-8 encoding, TERM=vscode
+│   ├── ConsoleHost.ps1      ← welcome banner, wtprofile sourcing
+│   ├── VSCode.ps1           ← UTF-8 encoding, TERM=vscode
+│   ├── shell-integration.ps1← WT OSC 133 markers (command marks, scrollbar)
+│   └── wtprofile.ps1        ← WT enhanced profile (zoxide, CTT utils, Show-Help)
 └── docs/
     ├── ARCHITECTURE.md       ← Mermaid diagrams (loading flow, components)
     ├── PURPOSE.md            ← design rationale & decisions
