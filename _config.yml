@@ -1,0 +1,7 @@
+title: PowerShell Dotfiles Ecosystem
+description: Modular, version-controlled PowerShell profile & toolbox
+theme: jekyll-theme-cayman
+markdown: GFM
+show_downloads: false
+github:
+  repository_url: https://github.com/martinpaprcka77/dotfiles-powershell
