@@ -57,4 +57,9 @@ $zPath = Join-Path $env:DOTFILES_PWSH 'z.ps1'
 if (Test-Path $zPath) { . $zPath }
 #endregion
 
+#region WT Shell Integration (command marks, scrollbar marks, Ctrl+Up/Down)
+$shellIntegration = Join-Path $env:DOTFILES_PWSH 'hosts\shell-integration.ps1'
+if (Test-Path $shellIntegration) { . $shellIntegration }
+#endregion
+
 Write-Verbose "Loaded: PS7 profile" -Verbose:$false
