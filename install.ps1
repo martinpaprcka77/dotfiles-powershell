@@ -66,6 +66,14 @@ function CloneOrUpdate {
         }
     }
     elseif (-not $isRepo) {
+        # If directory exists but isn't a git repo, remove it so git clone can succeed
+        if (Test-Path $Path) {
+            Write-Warn "Directory exists but is not a git repo: $Path"
+            if ($PSCmdlet.ShouldProcess($Path, 'Remove directory before clone')) {
+                Remove-Item -Path $Path -Recurse -Force
+                Write-Ok "Removed: $Path"
+            } else { return }
+        }
         Write-Step "Cloning $Url to $Path..."
         if ($PSCmdlet.ShouldProcess($Path, "git clone $Url")) {
             try {
