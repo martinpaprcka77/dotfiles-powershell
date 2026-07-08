@@ -19,6 +19,7 @@
 | Version/host profiles | Windows Terminal integration |
 | Secret management helpers | Pester tests |
 | 👉 **[github.com/martinpaprcka77/dotfiles-powershell](https://github.com/martinpaprcka77/dotfiles-powershell)** | 👉 **[github.com/martinpaprcka77/dotfiles-tools](https://github.com/martinpaprcka77/dotfiles-tools)** |
+| **🌐 Portal: [martinpaprcka77.github.io](https://martinpaprcka77.github.io)** | |
 
 ---
 
