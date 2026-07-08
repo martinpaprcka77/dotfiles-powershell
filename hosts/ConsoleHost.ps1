@@ -15,13 +15,15 @@ $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyCont
 $uptime = if ($os) { (Get-Date) - $os.LastBootUpTime }
 $uptimeStr = if ($uptime) { "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m" } else { "unknown" }
 
-Write-Host @"
-╔══════════════════════════════════════════════╗
-║  PowerShell $($PSVersionTable.PSVersion.ToString().PadRight(29)) ║
-║  $($env:USERNAME)@$($env:COMPUTERNAME).PadRight(39) ║
-║  Uptime: $($uptimeStr.PadRight(33)) ║
-╚══════════════════════════════════════════════╝
-"@ -ForegroundColor Cyan
+$psVer = $PSVersionTable.PSVersion.ToString()
+$userHost = "$($env:USERNAME)@$($env:COMPUTERNAME)"
+$maxLen = [Math]::Max($psVer.Length, $userHost.Length, $uptimeStr.Length, 20)
+
+Write-Host "╔$('═' * ($maxLen + 4))╗" -ForegroundColor Cyan
+Write-Host ("║  PowerShell {0}  ║" -f $psVer.PadRight($maxLen)) -ForegroundColor Cyan
+Write-Host ("║  {0}  ║" -f $userHost.PadRight($maxLen)) -ForegroundColor Cyan
+Write-Host ("║  Uptime: {0}  ║" -f $uptimeStr.PadRight($maxLen)) -ForegroundColor Cyan
+Write-Host "╚$('═' * ($maxLen + 4))╝" -ForegroundColor Cyan
 
 # Windows Terminal enhanced profile (zoxide, CTT utils, PSReadLine colors, Show-Help)
 # Guarded internally by $env:WT_SESSION
