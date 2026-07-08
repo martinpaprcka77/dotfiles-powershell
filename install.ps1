@@ -38,8 +38,8 @@ function Write-Warn { param([string]$M) Write-Host "  [!] $M" -ForegroundColor Y
 
 $script:restartNeeded = $false
 
-$dotfilesPwshUrl = 'https://github.com/USER/dotfiles-powershell.git'
-$dotfilesToolsUrl = 'https://github.com/USER/dotfiles-tools.git'
+$dotfilesPwshUrl = 'https://github.com/martinpaprcka77/dotfiles-powershell.git'
+$dotfilesToolsUrl = 'https://github.com/martinpaprcka77/dotfiles-tools.git'
 $dotfilesPwshPath = Join-Path $HOME '.config\powershell'
 $dotfilesToolsPath = Join-Path $HOME 'Projects\tools'
 

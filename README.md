@@ -43,7 +43,7 @@ $PROFILE (bootstrap) → ~/.config/powershell/profile.ps1
 ## Instalace
 
 ```powershell
-git clone https://github.com/USER/dotfiles-powershell.git ~/.config/powershell
+git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/powershell
 ~/.config/powershell/install.ps1
 ```
 
