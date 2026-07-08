@@ -87,6 +87,14 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 3. **PS5-only** → add to `ps5/profile.ps1`
 4. **Host-specific** → add to `hosts/ConsoleHost.ps1` or `hosts/VSCode.ps1`
 5. **New core file** → just drop a `.ps1` into `core/` — it auto-loads (profile.ps1 dot-sources all `core/*.ps1`)
+6. **User overrides** → copy `core/extra.ps1.example` to `core/extra.ps1` (gitignored), add your code
+
+### New in 2026
+- `core/extra.ps1` — gitignored user overrides, auto-sourced
+- `deps.ps1` (tools) — winget-based package installer for fresh machines
+- `windows.ps1` (tools) — Explorer, taskbar, privacy defaults
+- `Add-WTProfiles.ps1` — now generates JSON fragment extensions (WT 1.24+)
+- `.vscode/` — committed settings.json + tasks.json in tools repo
 
 ---
 
