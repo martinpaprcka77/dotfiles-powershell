@@ -12,6 +12,8 @@
     Otevře hlavní profil v editoru ($env:EDITOR, nebo code, nebo notepad).
 #>
 function Edit-Profile {
+    [CmdletBinding()]
+    param()
     $profilePath = Join-Path $HOME '.config\powershell\profile.ps1'
     $editor = if ($env:EDITOR) { $env:EDITOR } elseif (Get-Command code -ErrorAction SilentlyContinue) { 'code' } else { 'notepad' }
     & $editor $profilePath
@@ -22,6 +24,8 @@ function Edit-Profile {
     Znovu načte hlavní profil.
 #>
 function Reload-Profile {
+    [CmdletBinding()]
+    param()
     $profilePath = Join-Path $HOME '.config\powershell\profile.ps1'
     if (Test-Path $profilePath) {
         . $profilePath
@@ -44,6 +48,7 @@ function Reload-Profile {
     Get-SecretKey -Name 'MyApiKey'
 #>
 function Get-SecretKey {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [string]$Name
@@ -72,6 +77,8 @@ function Get-SecretKey {
     Zjistí, zda je aktuální session spuštěna jako administrátor.
 #>
 function Test-Admin {
+    [CmdletBinding()]
+    param()
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]$identity
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -82,6 +89,7 @@ function Test-Admin {
     Vytvoří adresář a vstoupí do něj.
 #>
 function mkcd {
+    [CmdletBinding()]
     param([string]$Path)
     New-Item -ItemType Directory -Path $Path -Force | Out-Null
     Set-Location $Path

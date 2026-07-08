@@ -41,10 +41,6 @@ foreach ($repo in $repos) {
         try {
             Push-Location $repo.Path
 
-            # Save current HEAD
-            $before = git rev-parse HEAD 2>&1
-            if ($LASTEXITCODE -ne 0) { throw "git rev-parse failed" }
-
             # Fetch
             git fetch origin 2>&1 | Out-Null
 
@@ -64,10 +60,11 @@ foreach ($repo in $repos) {
                 Write-Skip "Already up-to-date: $($repo.Name)"
             }
 
-            Pop-Location
         }
         catch {
             Write-Fail "Update failed: $_"
+        }
+        finally {
             Pop-Location
         }
     }

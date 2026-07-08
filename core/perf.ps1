@@ -19,6 +19,8 @@
     Measure-Profile
 #>
 function Measure-Profile {
+    [CmdletBinding()]
+    param()
     $profilePath = Join-Path $env:DOTFILES_PWSH 'profile.ps1'
     if (-not (Test-Path $profilePath)) {
         Write-Host "Profile not found: $profilePath" -ForegroundColor Red
@@ -86,6 +88,8 @@ function Measure-Profile {
     Clear-PSCache
 #>
 function Clear-PSCache {
+    [CmdletBinding()]
+    param()
     $caches = @(
         "$env:LOCALAPPDATA\Microsoft\PowerShell\ModuleAnalysisCache-*",
         "$env:LOCALAPPDATA\Microsoft\PowerShell\StartupProfileData-*",
@@ -121,6 +125,8 @@ function Clear-PSCache {
     Optimize-ModuleLoading
 #>
 function Optimize-ModuleLoading {
+    [CmdletBinding()]
+    param()
     Write-Host "`n📦 MODULE LOADING ANALYSIS" -ForegroundColor Magenta
 
     $essential = @('Microsoft.PowerShell.Core', 'PSReadLine')
@@ -147,6 +153,8 @@ function Optimize-ModuleLoading {
     Reports total size of the profile in lines and bytes.
 #>
 function Get-ProfileSize {
+    [CmdletBinding()]
+    param()
     $profilePath = Join-Path $env:DOTFILES_PWSH 'profile.ps1'
     $coreDir = Join-Path $env:DOTFILES_PWSH 'core'
 

@@ -25,16 +25,17 @@ if ($IsLinux -or $IsMacOS) { return }  # PSDiagnostics is Windows-only
     Stop-PSProfiling
 #>
 function Start-PSProfiling {
+    [CmdletBinding()]
     param([string]$SessionName = 'PSProfileTrace')
     if (-not (Get-Module PSDiagnostics -ListAvailable)) {
-        Write-Warn "PSDiagnostics module not available (Windows only)"
+        Write-Warning "PSDiagnostics module not available (Windows only)"
         return
     }
     Import-Module PSDiagnostics -ErrorAction Stop
-    Write-Info "Starting ETW trace session: $SessionName"
+    Write-Host "Starting ETW trace session: $SessionName" -ForegroundColor Cyan
     Enable-PSTrace -Force -ErrorAction SilentlyContinue
-    Start-Trace -SessionName $SessionName -ErrorAction Stop
-    Write-Success "Trace started. Run your commands, then: Stop-PSProfiling"
+    Start-PSTrace -SessionName $SessionName -ErrorAction Stop
+    Write-Host "Trace started. Run your commands, then: Stop-PSProfiling" -ForegroundColor Green
 }
 
 <#
@@ -42,17 +43,18 @@ function Start-PSProfiling {
     Stops the ETW trace session and reports the trace file location.
 #>
 function Stop-PSProfiling {
+    [CmdletBinding()]
     param([string]$SessionName = 'PSProfileTrace')
-    if (-not (Get-Module PSDiagnostics)) { Write-Warn "No trace running."; return }
-    Write-Info "Stopping trace session: $SessionName"
-    Stop-Trace -SessionName $SessionName -ErrorAction SilentlyContinue
+    if (-not (Get-Module PSDiagnostics)) { Write-Warning "No trace running."; return }
+    Write-Host "Stopping trace session: $SessionName" -ForegroundColor Cyan
+    Stop-PSTrace -SessionName $SessionName -ErrorAction SilentlyContinue
     Disable-PSTrace -ErrorAction SilentlyContinue
     $traceFile = "$env:TEMP\$SessionName.etl"
     if (Test-Path $traceFile) {
-        Write-Success "Trace saved: $traceFile"
+        Write-Host "Trace saved: $traceFile" -ForegroundColor Green
         Write-Host "  Open in Windows Performance Analyzer or PerfView" -ForegroundColor DarkGray
     } else {
-        Write-Warn "Trace file not found. Trace may not have captured data."
+        Write-Warning "Trace file not found. Trace may not have captured data."
     }
 }
 
@@ -67,19 +69,20 @@ function Stop-PSProfiling {
     Measure-PSCommand { . $PROFILE }
 #>
 function Measure-PSCommand {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [scriptblock]$ScriptBlock,
         [string]$SessionName = 'PSCommandTrace'
     )
     if (-not (Get-Module PSDiagnostics -ListAvailable)) {
-        Write-Warn "PSDiagnostics not available — falling back to Measure-Command"
+        Write-Warning "PSDiagnostics not available — falling back to Measure-Command"
         return Measure-Command $ScriptBlock
     }
     Start-PSProfiling -SessionName $SessionName
     try {
         $result = Measure-Command $ScriptBlock
-        Write-Success "Command completed in $($result.TotalMilliseconds.ToString('F0'))ms"
+        Write-Host "Command completed in $($result.TotalMilliseconds.ToString('F0'))ms" -ForegroundColor Green
     } finally {
         Stop-PSProfiling -SessionName $SessionName
     }
@@ -91,14 +94,20 @@ function Measure-PSCommand {
     Shows PowerShell-related Windows event log properties.
 #>
 function Get-PSEventLog {
+    [CmdletBinding()]
     $logs = @('PowerShellCore/Operational', 'Windows PowerShell', 'Microsoft-Windows-PowerShell/Operational')
+    if (-not (Get-Module PSDiagnostics -ListAvailable)) {
+        Write-Warning "PSDiagnostics not available (Windows only)"
+        return
+    }
+    Import-Module PSDiagnostics -ErrorAction Stop
     Write-Host "`n📋 PowerShell Event Logs" -ForegroundColor Cyan
     foreach ($log in $logs) {
         try {
-            $props = Get-LogProperties -Name $log -ErrorAction Stop
-            $size = if ($props.LogSize) { "$([math]::Round($props.LogSize/1MB, 1)) MB" } else { 'N/A' }
+            $logInfo = Get-WinEvent -ListLog $log -ErrorAction Stop
+            $size = if ($logInfo.FileSize) { "$([math]::Round($logInfo.FileSize/1MB, 1)) MB" } else { 'N/A' }
             Write-Host "  $log" -ForegroundColor White
-            Write-Host "    Size: $size  |  Max: $($props.MaximumSizeInBytes/1MB) MB  |  Retention: $($props.LogMode)" -ForegroundColor DarkGray
+            Write-Host "    Size: $size  |  Max: $($logInfo.MaximumSizeInBytes/1MB) MB  |  Retention: $($logInfo.LogMode)" -ForegroundColor DarkGray
         } catch {
             Write-Host "  $log — not available" -ForegroundColor DarkGray
         }

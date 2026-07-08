@@ -24,12 +24,12 @@ if (-not $env:EDITOR) {
 }
 
 # Tools PATH (idempotent)
+# Confirm DOTFILES_TOOLS first — Join-Path on $null produces relative paths
+if (-not $env:DOTFILES_TOOLS) {
+    $env:DOTFILES_TOOLS = Join-Path $HOME 'Projects\tools'
+}
+
 $toolsBin = Join-Path $env:DOTFILES_TOOLS 'bin'
 if ($toolsBin -notin ($env:PATH -split [IO.Path]::PathSeparator)) {
     $env:PATH = "$toolsBin$([IO.Path]::PathSeparator)$env:PATH"
-}
-
-# Confirm DOTFILES_TOOLS
-if (-not $env:DOTFILES_TOOLS) {
-    $env:DOTFILES_TOOLS = Join-Path $HOME 'Projects\tools'
 }

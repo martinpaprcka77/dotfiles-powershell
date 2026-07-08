@@ -18,4 +18,4 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 # Console encoding (PS5 defaults to ASCII)
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 
-Write-Verbose "Loaded: PS5 profile" -Verbose:$false
+# PS5 profile loaded

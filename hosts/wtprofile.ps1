@@ -20,7 +20,7 @@ if (-not $env:WT_SESSION) { return }
 # ── zoxide — smart directory jumper ────────────────────────────
 # https://github.com/ajeetdsouza/zoxide
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& { (zoxide init --cmd z powershell | Out-String) })
+    Invoke-Expression (zoxide init --cmd z powershell | Out-String)
 }
 
 # ── PSReadLine — syntax colors + keybinds ──────────────────────
@@ -73,6 +73,7 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine | Sort-Object Version 
     Vytvoří soubor nebo aktualizuje jeho čas (jako Linux touch).
 #>
 function touch {
+    [CmdletBinding()]
     param([string]$File)
     if (Test-Path $File) {
         (Get-Item $File).LastWriteTime = Get-Date
@@ -86,8 +87,9 @@ function touch {
     Přesune soubor/adresář do Koše (místo trvalého smazání).
 #>
 function trash {
+    [CmdletBinding()]
     param([string]$Path)
-    if (-not (Test-Path $Path)) { Write-Warn "Not found: $Path"; return }
+    if (-not (Test-Path $Path)) { Write-Warning "Not found: $Path"; return }
     if (Test-Path $Path -PathType Container) {
         [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($Path, 'OnlyErrorDialogs', 'SendToRecycleBin')
     } else {
@@ -100,6 +102,7 @@ function trash {
     Rekurzivně hledá soubory podle názvu (jako Linux find -name).
 #>
 function ff {
+    [CmdletBinding()]
     param([string]$Name)
     Get-ChildItem -Recurse -Filter $Name -File -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty FullName
@@ -110,6 +113,7 @@ function ff {
     Najde cestu k příkazu (jako Linux which).
 #>
 function which {
+    [CmdletBinding()]
     param([string]$Name)
     (Get-Command $Name -ErrorAction SilentlyContinue).Source
 }
@@ -119,17 +123,25 @@ function which {
     Nahradí text v souboru (jako Linux sed).
 #>
 function sed {
+    [CmdletBinding()]
+    # ponytail: case-sensitive .Replace(), not regex like real sed; add -Replace for regex if needed
     param([string]$File, [string]$Find, [string]$Replace)
     (Get-Content $File -Raw).Replace($Find, $Replace) | Set-Content $File -NoNewline
 }
 
 <#
 .SYNOPSIS
-    Zobrazí prvních 10 řádků souboru (jako Linux head).
+    Zobrazí první řádky souboru (jako Linux head).
+    PS5 fallback: Select-Object -First (no -Head parameter).
 #>
 function head {
+    [CmdletBinding()]
     param([string]$Path, [int]$Lines = 10)
-    Get-Content $Path -Head $Lines
+    if ($PSVersionTable.PSVersion.Major -ge 7) {
+        Get-Content $Path -Head $Lines
+    } else {
+        Get-Content $Path | Select-Object -First $Lines
+    }
 }
 
 <#
@@ -137,6 +149,7 @@ function head {
     Najde proces podle názvu.
 #>
 function pgrep {
+    [CmdletBinding()]
     param([string]$Name)
     Get-Process -Name $Name -ErrorAction SilentlyContinue
 }
@@ -146,6 +159,7 @@ function pgrep {
     Ukončí proces podle názvu.
 #>
 function pkill {
+    [CmdletBinding()]
     param([string]$Name)
     Get-Process -Name $Name -ErrorAction SilentlyContinue | Stop-Process -Force
 }
@@ -154,13 +168,16 @@ function pkill {
 .SYNOPSIS
     Alias pro pkill.
 #>
-function k9 { param([string]$Name) pkill $Name }
+function k9 {
+    [CmdletBinding()]
+    param([string]$Name) pkill $Name }
 
 <#
 .SYNOPSIS
     Zobrazí dobu běhu systému.
 #>
 function uptime {
+    [CmdletBinding()]
     $os = Get-CimInstance -ClassName Win32_OperatingSystem
     $uptime = (Get-Date) - $os.LastBootUpTime
     "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"
@@ -179,46 +196,54 @@ Set-Alias -Name grep  -Value Select-String
     Zobrazí přehled všech dostupných funkcí a zkratek.
 #>
 function Show-Help {
+    [CmdletBinding()]
+    # $PSStyle only exists in PS7+; fallback to plain text on PS5
+    $s = if ($PSVersionTable.PSVersion.Major -ge 7) { $PSStyle } else { $null }
+    $m = if ($s) { $s.Foreground.BrightMagenta } else { '' }; $r = if ($s) { $s.Reset } else { '' }
+    $b = if ($s) { $s.Foreground.BrightBlue } else { '' };   $k = if ($s) { $s.Foreground.BrightBlack } else { '' }
+    $g = if ($s) { $s.Foreground.BrightGreen } else { '' };   $y = if ($s) { $s.Foreground.BrightYellow } else { '' }
+    $w = if ($s) { $s.Foreground.BrightWhite } else { '' }
+
     Write-Host @"
 
 
-$($PSStyle.Foreground.BrightMagenta)⚡ Windows Terminal Profile — Help$($PSStyle.Reset)
-$($PSStyle.Foreground.BrightBlack)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$($PSStyle.Reset)
+${m}⚡ Windows Terminal Profile — Help${r}
+${k}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${r}
 
-$($PSStyle.Foreground.BrightBlue)📂 Navigation$($PSStyle.Reset)
-$($PSStyle.Foreground.BrightBlack)─────────────────────────────────────────────$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)z <dir>$($PSStyle.Reset)         $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Smart jump to directory (learns your habits)$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)mkcd <dir>$($PSStyle.Reset)      $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Create + enter directory$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)docs$($PSStyle.Reset)            $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Jump to Documents$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)ll$($PSStyle.Reset)              $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)List files with hidden$($PSStyle.Reset)
+${b}📂 Navigation${r}
+${k}─────────────────────────────────────────────${r}
+  ${g}z <dir>${r}         ${y}→${r} ${w}Smart jump to directory (learns your habits)${r}
+  ${g}mkcd <dir>${r}      ${y}→${r} ${w}Create + enter directory${r}
+  ${g}docs${r}            ${y}→${r} ${w}Jump to Documents${r}
+  ${g}ll${r}              ${y}→${r} ${w}List files with hidden${r}
 
-$($PSStyle.Foreground.BrightBlue)📁 Files$($PSStyle.Reset)
-$($PSStyle.Foreground.BrightBlack)─────────────────────────────────────────────$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)touch <file>$($PSStyle.Reset)   $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Create file or update timestamp$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)trash <path>$($PSStyle.Reset)   $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Move to Recycle Bin$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)ff <name>$($PSStyle.Reset)      $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Recursive file search$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)grep <pattern>$($PSStyle.Reset) $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Search text in files$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)head <file>$($PSStyle.Reset)    $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)First 10 lines$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)sed <f> <old> <new>$($PSStyle.Reset) $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Replace text in file$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)unzip <file>$($PSStyle.Reset)   $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Expand archive$($PSStyle.Reset)
+${b}📁 Files${r}
+${k}─────────────────────────────────────────────${r}
+  ${g}touch <file>${r}   ${y}→${r} ${w}Create file or update timestamp${r}
+  ${g}trash <path>${r}   ${y}→${r} ${w}Move to Recycle Bin${r}
+  ${g}ff <name>${r}      ${y}→${r} ${w}Recursive file search${r}
+  ${g}grep <pattern>${r} ${y}→${r} ${w}Search text in files${r}
+  ${g}head <file>${r}    ${y}→${r} ${w}First N lines${r}
+  ${g}sed <f> <old> <new>${r} ${y}→${r} ${w}Replace text in file${r}
+  ${g}unzip <file>${r}   ${y}→${r} ${w}Expand archive${r}
 
-$($PSStyle.Foreground.BrightBlue)🔧 System$($PSStyle.Reset)
-$($PSStyle.Foreground.BrightBlack)─────────────────────────────────────────────$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)uptime$($PSStyle.Reset)         $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)System uptime$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)which <cmd>$($PSStyle.Reset)    $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Locate command path$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)pgrep <name>$($PSStyle.Reset)   $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Find process$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)pkill <name>$($PSStyle.Reset)   $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Kill process$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)k9 <name>$($PSStyle.Reset)      $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Alias for pkill$($PSStyle.Reset)
+${b}🔧 System${r}
+${k}─────────────────────────────────────────────${r}
+  ${g}uptime${r}         ${y}→${r} ${w}System uptime${r}
+  ${g}which <cmd>${r}    ${y}→${r} ${w}Locate command path${r}
+  ${g}pgrep <name>${r}   ${y}→${r} ${w}Find process${r}
+  ${g}pkill <name>${r}   ${y}→${r} ${w}Kill process${r}
+  ${g}k9 <name>${r}      ${y}→${r} ${w}Alias for pkill${r}
 
-$($PSStyle.Foreground.BrightBlue)🎨 Profile$($PSStyle.Reset)
-$($PSStyle.Foreground.BrightBlack)─────────────────────────────────────────────$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)ep$($PSStyle.Reset)              $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Edit profile$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)rp$($PSStyle.Reset)              $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Reload profile$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)menu$($PSStyle.Reset)            $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Interactive main menu$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)check$($PSStyle.Reset)           $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)System diagnostics$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)update$($PSStyle.Reset)          $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)Git pull + reload$($PSStyle.Reset)
-  $($PSStyle.Foreground.BrightGreen)Show-Help$($PSStyle.Reset)      $($PSStyle.Foreground.BrightYellow)→$($PSStyle.Reset) $($PSStyle.Foreground.BrightWhite)This help screen$($PSStyle.Reset)
+${b}🎨 Profile${r}
+${k}─────────────────────────────────────────────${r}
+  ${g}ep${r}              ${y}→${r} ${w}Edit profile${r}
+  ${g}rp${r}              ${y}→${r} ${w}Reload profile${r}
+  ${g}menu${r}            ${y}→${r} ${w}Interactive main menu${r}
+  ${g}check${r}           ${y}→${r} ${w}System diagnostics${r}
+  ${g}update${r}          ${y}→${r} ${w}Git pull + reload${r}
+  ${g}Show-Help${r}      ${y}→${r} ${w}This help screen${r}
 
-$($PSStyle.Foreground.BrightBlack)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$($PSStyle.Reset)
+${k}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${r}
 "@
 }

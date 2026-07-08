@@ -43,7 +43,7 @@ if (Test-Path $versionProfile) {
 #endregion
 
 #region Host-specific profile
-$hostName = if ($host.Name -match 'Code') { 'VSCode' } else { 'ConsoleHost' }
+$hostName = if ($Host.Name -match 'Code') { 'VSCode' } else { 'ConsoleHost' }
 $hostProfile = Join-Path $env:DOTFILES_PWSH "hosts\$hostName.ps1"
 if (Test-Path $hostProfile) {
     . $hostProfile

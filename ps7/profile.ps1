@@ -71,4 +71,4 @@ $shellIntegration = Join-Path $env:DOTFILES_PWSH 'hosts\shell-integration.ps1'
 if (Test-Path $shellIntegration) { . $shellIntegration }
 #endregion
 
-Write-Verbose "Loaded: PS7 profile" -Verbose:$false
+# PS7 profile loaded

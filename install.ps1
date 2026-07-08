@@ -28,7 +28,7 @@ param(
     [switch]$Force
 )
 
-$script:Summary = [System.Collections.ArrayList]::new()
+$script:Summary = [System.Collections.Generic.List[string]]::new()
 
 function Write-Step { param([string]$M) Write-Host "==> $M" -ForegroundColor Cyan }
 function Write-Ok  { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green;  $null = $script:Summary.Add("  [+] $M") }
@@ -58,9 +58,9 @@ function CloneOrUpdate {
                 git pull --ff-only 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0) { Write-Ok "Updated: $Path" }
                 else { Write-Fail "git pull failed in $Path" }
-                Pop-Location
             } catch {
                 Write-Fail "Update failed: $_"
+            } finally {
                 Pop-Location
             }
         }

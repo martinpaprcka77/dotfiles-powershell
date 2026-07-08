@@ -22,7 +22,7 @@ if (-not $env:WT_SESSION) { return }
 $Global:__LastHistoryId = -1
 
 function Global:__Terminal-Get-LastExitCode {
-    if ($? -eq $True) { return 0 }
+    if ($?) { return 0 }
     $LastHistoryEntry = $(Get-History -Count 1)
     $IsPowerShellError = $Error[0].InvocationInfo.HistoryId -eq $LastHistoryEntry.Id
     if ($IsPowerShellError) { return -1 }
@@ -33,8 +33,9 @@ function Global:__Terminal-Get-LastExitCode {
 $Global:__OriginalPrompt = $function:prompt
 
 function Global:prompt {
-    $gle = $(__Terminal-Get-LastExitCode)
-    $LastHistoryEntry = $(Get-History -Count 1)
+    $out = ''
+    $gle = __Terminal-Get-LastExitCode
+    $LastHistoryEntry = Get-History -Count 1
 
     # ── OSC 133;D — end of previous command ──
     if ($Global:__LastHistoryId -ne -1) {
@@ -48,7 +49,7 @@ function Global:prompt {
     }
 
     # ── OSC 133;A — start of prompt ──
-    $loc = $($executionContext.SessionState.Path.CurrentLocation)
+    $loc = $executionContext.SessionState.Path.CurrentLocation
     $out += "$([char]0x1B)]133;A$([char]0x07)"
 
     # ── OSC 9;9 — current working directory ──

@@ -8,7 +8,7 @@
 #>
 
 # Window title
-$host.UI.RawUI.WindowTitle = "PowerShell $($PSVersionTable.PSVersion)"
+$Host.UI.RawUI.WindowTitle = "PowerShell $($PSVersionTable.PSVersion)"
 
 # Welcome message
 $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
@@ -17,7 +17,7 @@ $uptimeStr = if ($uptime) { "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minute
 
 $psVer = $PSVersionTable.PSVersion.ToString()
 $userHost = "$($env:USERNAME)@$($env:COMPUTERNAME)"
-$maxLen = [Math]::Max($psVer.Length, $userHost.Length, $uptimeStr.Length, 20)
+$maxLen = [Math]::Max([Math]::Max($psVer.Length, $userHost.Length), [Math]::Max($uptimeStr.Length, 20))
 
 Write-Host "╔$('═' * ($maxLen + 4))╗" -ForegroundColor Cyan
 Write-Host ("║  PowerShell {0}  ║" -f $psVer.PadRight($maxLen)) -ForegroundColor Cyan

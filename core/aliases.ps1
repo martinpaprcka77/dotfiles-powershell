@@ -18,15 +18,19 @@ Set-Alias -Name rp  -Value Reload-Profile -Force
 
 # Git shortcuts (if git is available)
 if (Get-Command git -ErrorAction SilentlyContinue) {
-    function g { git $args }
-    function gst { git status $args }
-    function gco { git checkout $args }
-    function gbr { git branch $args }
-    function gcm { git commit -m $args }
-    function gpl { git pull $args }
-    function gps { git push $args }
-    function gdf { git diff $args }
-    function glo { git log --oneline --graph --decorate -20 $args }
+    function g {
+        [CmdletBinding()]
+        param([Parameter(ValueFromRemainingArguments)]$GitArgs)
+        git @GitArgs
+    }
+    function gst { git status @args }
+    function gco { git checkout @args }
+    function gbr { git branch @args }
+    function gcm { git commit -m @args }
+    function gpl { git pull @args }
+    function gps { git push @args }
+    function gdf { git diff @args }
+    function glo { git log --oneline --graph --decorate -20 @args }
 }
 
 # Kubernetes shortcuts (if kubectl is available)

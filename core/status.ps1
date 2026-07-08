@@ -9,15 +9,18 @@
 #>
 
 function Show-Status {
-    Write-Host "`n📊 DOTFILES ECOSYSTEM — STATUS DASHBOARD" -ForegroundColor Magenta
+    [CmdletBinding()]
+    param()
     Write-Host "   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
     Write-Host "   $(('─' * 55))" -ForegroundColor DarkGray
 
     $ok = 0; $warn = 0; $fail = 0
 
-    function Dot { param([string]$L, [string]$S)
-        $c = if ($S -eq '✅') { $ok++; 'Green' } elseif ($S -eq '⚠️') { $warn++; 'Yellow' } else { $fail++; 'Red' }
-        Write-Host "   $S $L" -ForegroundColor $c
+    function Dot { param([string]$L, [string]$S, [string]$Extra)
+        $c = if ($S -eq '✅') { $script:ok++; 'Green' } elseif ($S -eq '⚠️') { $script:warn++; 'Yellow' } else { $script:fail++; 'Red' }
+        $line = "   $S $L"
+        if ($Extra) { $line += "  $Extra" }
+        Write-Host $line -ForegroundColor $c
     }
 
     # ── Dotfiles ───────────────────────────────────────────────
@@ -65,7 +68,7 @@ function Show-Status {
     Write-Host "`n   DOCKER" -ForegroundColor Cyan
     Dot 'Docker installed'    $(if (Get-Command docker -ErrorAction SilentlyContinue) { '✅' } else { '⚠️' })
     if (Get-Command docker -ErrorAction SilentlyContinue) {
-        $running = (docker ps -q 2>&1 | Measure-Object).Count
+        $running = (docker ps -q 2>$null | Measure-Object).Count
         Dot "  Running containers" '✅' "$running"
     }
 
