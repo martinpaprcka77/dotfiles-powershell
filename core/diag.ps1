@@ -65,6 +65,8 @@ function Stop-PSProfiling {
 .DESCRIPTION
     Runs Start-PSProfiling, executes the scriptblock, then stops and reports.
     More detailed than Measure-Command — captures ETW events.
+    For a simpler, cross-platform total-time breakdown of profile.ps1 itself,
+    see Measure-Profile in core/perf.ps1.
 .EXAMPLE
     Measure-PSCommand { . $PROFILE }
 #>
@@ -95,6 +97,7 @@ function Measure-PSCommand {
 #>
 function Get-PSEventLog {
     [CmdletBinding()]
+    param()
     $logs = @('PowerShellCore/Operational', 'Windows PowerShell', 'Microsoft-Windows-PowerShell/Operational')
     if (-not (Get-Module PSDiagnostics -ListAvailable)) {
         Write-Warning "PSDiagnostics not available (Windows only)"

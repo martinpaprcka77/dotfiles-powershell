@@ -16,6 +16,8 @@
     Cesta: ~/.config/powershell/hosts/shell-integration.ps1
 #>
 
+Set-StrictMode -Version Latest
+
 # Only activate in Windows Terminal (check WT_SESSION env var)
 if (-not $env:WT_SESSION) { return }
 
@@ -23,8 +25,12 @@ $Global:__LastHistoryId = -1
 
 function Global:__Terminal-Get-LastExitCode {
     if ($?) { return 0 }
-    $LastHistoryEntry = $(Get-History -Count 1)
-    $IsPowerShellError = $Error[0].InvocationInfo.HistoryId -eq $LastHistoryEntry.Id
+    # Guard against no history yet / no recorded error — both are $null on a
+    # fresh session before the first command runs, which throws under
+    # Set-StrictMode when dereferenced directly.
+    $LastHistoryEntry = Get-History -Count 1
+    $lastError = if ($Error.Count -gt 0) { $Error[0] } else { $null }
+    $IsPowerShellError = $lastError -and $LastHistoryEntry -and ($lastError.InvocationInfo.HistoryId -eq $LastHistoryEntry.Id)
     if ($IsPowerShellError) { return -1 }
     return $LastExitCode
 }
@@ -39,7 +45,7 @@ function Global:prompt {
 
     # ── OSC 133;D — end of previous command ──
     if ($Global:__LastHistoryId -ne -1) {
-        if ($LastHistoryEntry.Id -eq $Global:__LastHistoryId) {
+        if ($LastHistoryEntry -and $LastHistoryEntry.Id -eq $Global:__LastHistoryId) {
             # No command was run (empty line, Ctrl+C) — no exit code
             $out += "$([char]0x1B)]133;D$([char]0x07)"
         } else {
@@ -63,6 +69,8 @@ function Global:prompt {
     # ── OSC 133;B — end of prompt, start of command input ──
     $out += "$([char]0x1B)]133;B$([char]0x07)"
 
-    $Global:__LastHistoryId = $LastHistoryEntry.Id
+    if ($LastHistoryEntry) {
+        $Global:__LastHistoryId = $LastHistoryEntry.Id
+    }
     return $out
 }

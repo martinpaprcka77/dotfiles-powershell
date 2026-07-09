@@ -8,6 +8,8 @@
     Cesta: ~/.config/powershell/ps7/profile.ps1
 #>
 
+Set-StrictMode -Version Latest
+
 #region PSReadLine
 if ($null -ne (Get-Module -ListAvailable -Name PSReadLine | Sort-Object Version -Descending | Select-Object -First 1)) {
     Import-Module PSReadLine
