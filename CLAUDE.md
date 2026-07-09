@@ -10,7 +10,9 @@ Companion: `dotfiles-tools` at `~/Projects/tools/`.
 - `profile.ps1` — main orchestrator, dot-sources everything
 - `install.ps1` — idempotent installer (git clone, bootstrap injection, PATH setup)
 - `update.ps1` — git pull + profile reload
+- `lib/output.ps1` — shared Write-Step/Ok/Skip/Fail/Warn for install.ps1/update.ps1 (not auto-loaded like core/)
 - `core/functions.ps1` — Edit-Profile, Reload-Profile, Get-SecretKey, mkcd
+- `core/status.ps1`, `core/perf.ps1`, `core/diag.ps1` — health dashboard, load-time profiling, ETW tracing (Windows-only)
 
 ## Architecture decisions
 - `~/.config/powershell/` chosen over `Documents\` to bypass OneDrive

@@ -27,22 +27,37 @@
 ├── profile.ps1              ← MAIN ORCHESTRATOR — dot-sources everything below
 ├── install.ps1              ← idempotent installer (runs git clone, injects bootstrap)
 ├── update.ps1               ← git pull + reload profile
-├── bootstrap.ps1            ← minimal 4-line snippet injected into $PROFILE
+├── bootstrap.ps1            ← minimal snippet injected into $PROFILE
 ├── index.html               ← GitHub Pages landing page
 ├── .nojekyll                ← disables Jekyll for Pages
 ├── .gitignore
 │
+├── lib/
+│   └── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn — shared by install.ps1/update.ps1
+│                               only (NOT auto-loaded into the profile like core/ — these two
+│                               scripts run standalone, often before a profile session exists)
+│
 ├── core/                    ← ALWAYS loaded (shared across all PS versions/hosts)
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
 │   ├── functions.ps1        ← Edit-Profile, Reload-Profile, Get-SecretKey, mkcd, Test-Admin
-│   └── env.ps1              ← $env:EDITOR, PATH, $env:DOTFILES_TOOLS
+│   ├── env.ps1              ← $env:EDITOR, PATH, $env:DOTFILES_TOOLS
+│   ├── diag.ps1             ← ETW/PSDiagnostics tracing (Windows-only, early-returns elsewhere)
+│   ├── perf.ps1             ← Measure-Profile, Clear-PSCache, Optimize-ModuleLoading, Get-ProfileSize
+│   ├── status.ps1           ← Show-Status — global health dashboard
+│   └── extra.ps1.example    ← template for gitignored user overrides (copy to extra.ps1)
 │
 ├── ps5/profile.ps1          ← Windows PowerShell 5.1 only (PSReadLine v2, UTF-8)
-├── ps7/profile.ps1          ← PS 7+ only (PSReadLine v3, oh-my-posh, Terminal-Icons, PSFzf)
+├── ps7/profile.ps1          ← PS 7+ only (PSReadLine v3, Starship/oh-my-posh, Terminal-Icons, PSFzf)
 │
 ├── hosts/
-│   ├── ConsoleHost.ps1      ← classic terminal (welcome banner, uptime, window title)
-│   └── VSCode.ps1           ← VS Code integrated terminal (no banner, UTF-8)
+│   ├── ConsoleHost.ps1      ← classic terminal (welcome banner, uptime, window title);
+│   │                           sources wtprofile.ps1 itself (not via host detection)
+│   ├── VSCode.ps1           ← VS Code integrated terminal (no banner, UTF-8)
+│   ├── wtprofile.ps1        ← Windows Terminal utilities (zoxide, trash, Show-Help, …);
+│   │                           only loads if $env:WT_SESSION is set — sourced from
+│   │                           ConsoleHost.ps1, so it does NOT run under VSCode.ps1
+│   └── shell-integration.ps1← OSC 133 prompt markers; sourced from ps7/profile.ps1 directly
+│                               (not from host detection, so PS5 never gets it)
 │
 └── docs/
     ├── ARCHITECTURE.md       ← 4 Mermaid UML diagrams
@@ -62,7 +77,12 @@ PowerShell starts
       → fix PSModulePath (PS7: prepend LOCALAPPDATA)
       → dot-source core/*.ps1
       → dot-source ps5/ or ps7/ (based on $PSVersionTable)
+        (ps7/profile.ps1 additionally dot-sources hosts/shell-integration.ps1
+         directly — not via host detection, so this never runs on PS5)
       → dot-source hosts/ConsoleHost or VSCode (based on $host.Name)
+        (ConsoleHost.ps1 additionally dot-sources hosts/wtprofile.ps1 itself;
+         both wtprofile.ps1 and shell-integration.ps1 no-op unless
+         $env:WT_SESSION is set)
       → optionally show load time ($env:PROFILE_BENCHMARK)
 ```
 
@@ -101,12 +121,22 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 ## Coding conventions
 
 - **Comment-based help** on every function (`.SYNOPSIS`, `.DESCRIPTION`, `.PARAMETER`, `.EXAMPLE`, `.NOTES`)
-- **Verb-Noun naming** for functions (`Edit-Profile`, `Get-SecretKey`)
-- **Error handling**: `try/catch` for network/external calls, `$ErrorActionPreference = 'Stop'` at script top
+- **Verb-Noun naming** for functions (`Edit-Profile`, `Get-SecretKey`) — a few intentional
+  exceptions exist for shell ergonomics (`mkcd`, `touch`, `ff`, `sed`, `k9`, …)
+- **Error handling**: `try/catch` for network/external calls. `$ErrorActionPreference = 'Stop'`
+  and `Set-StrictMode -Version Latest` are set at the top of `install.ps1`/`update.ps1` only —
+  **never** in `profile.ps1` or `core/*.ps1`, where one failing optional file must not abort
+  the whole profile load.
 - **Idempotency**: use `Test-Path` before creating/modifying
 - **No network calls in profile** — keep startup fast (lazy loading)
-- **Cross-platform**: use `$IsWindows`, `$IsLinux`, `$IsMacOS` guards (available in PS6+)
-- **Paths**: use `Join-Path`, not string concatenation
+- **Cross-platform**: use `$IsWindows`, `$IsLinux`, `$IsMacOS` guards (available in PS6+ only —
+  these are undefined on Windows PowerShell 5.1; guard with
+  `$PSVersionTable.PSVersion.Major -ge 6` first, or PS5.1 will silently treat them as `$null`/falsy
+  without `Set-StrictMode`, and throw with it)
+- **Paths**: use `Join-Path`, not string concatenation; prefer `$env:DOTFILES_PWSH`/
+  `$env:DOTFILES_TOOLS` over hardcoding once a profile session exists (see `core/functions.ps1`,
+  `core/status.ps1`) — `bootstrap.ps1` and `install.ps1`'s injected snippet are the deliberate
+  exceptions, since they run before those env vars exist
 
 ---
 
