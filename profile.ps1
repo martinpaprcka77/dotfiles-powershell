@@ -22,6 +22,9 @@ if ($PSVersionTable.PSVersion.Major -ge 6) {
 #endregion
 
 #region Benchmark
+# Cheap total-time timer. For a step-by-step breakdown, use Measure-Profile
+# (core/perf.ps1). For ETW-level detail (module loads, JIT), use
+# Measure-PSCommand (core/diag.ps1, Windows-only).
 $profileStart = if ($env:PROFILE_BENCHMARK -eq 'true') { [Diagnostics.Stopwatch]::StartNew() } else { $null }
 #endregion
 

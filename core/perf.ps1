@@ -15,6 +15,8 @@
 .DESCRIPTION
     Runs profile.ps1 with timing for each section. Outputs a breakdown
     that shows exactly which part of the profile is slow.
+    For ETW-level detail (module loads, JIT, provider events) instead of
+    coarse timing, see Measure-PSCommand in core/diag.ps1 (Windows-only).
 .EXAMPLE
     Measure-Profile
 #>
@@ -161,7 +163,9 @@ function Get-ProfileSize {
     if (-not (Test-Path $profilePath)) { Write-Host "Profile not found." -ForegroundColor Red; return }
 
     $total = @{ Lines = 0; Bytes = 0; Files = 0 }
-    $files = @($profilePath)
+    # $files must be a uniform array of file objects (not a mix of string + FileInfo) —
+    # the loop below reads $f.FullName on every entry.
+    $files = @(Get-Item $profilePath)
     if (Test-Path $coreDir) { $files += Get-ChildItem $coreDir -Filter '*.ps1' }
 
     foreach ($f in $files) {

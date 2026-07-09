@@ -3,7 +3,7 @@
 > **Modular, version-controlled PowerShell profile** — bypasses OneDrive, auto-detects PS version & host, portable across machines.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--powershell-blue)](#)
-[![files](https://img.shields.io/badge/files-16-green)](#)
+[![files](https://img.shields.io/badge/files-17_scripts-green)](#)
 [![ps](https://img.shields.io/badge/PowerShell-5.1_|_7+-blue)](https://github.com/PowerShell/PowerShell)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
@@ -28,7 +28,7 @@
 | What | Details |
 |------|---------|
 | **Location** | `~/.config/powershell/` (XDG convention, outside OneDrive) |
-| **11 scripts** | `profile.ps1`, `install.ps1`, `update.ps1`, `bootstrap.ps1`, `core/aliases.ps1`, `core/functions.ps1`, `core/env.ps1`, `ps5/profile.ps1`, `ps7/profile.ps1`, `hosts/ConsoleHost.ps1`, `hosts/VSCode.ps1` |
+| **17 scripts** | `profile.ps1`, `install.ps1`, `update.ps1`, `bootstrap.ps1`, `lib/output.ps1`, `core/aliases.ps1`, `core/functions.ps1`, `core/env.ps1`, `core/diag.ps1`, `core/perf.ps1`, `core/status.ps1`, `ps5/profile.ps1`, `ps7/profile.ps1`, `hosts/ConsoleHost.ps1`, `hosts/VSCode.ps1`, `hosts/wtprofile.ps1`, `hosts/shell-integration.ps1` |
 | **3 docs** | ARCHITECTURE, PURPOSE, PROMPT |
 | **Key features** | PS5/7 auto-detection, ConsoleHost/VSCode detection, PSModulePath fix, profile benchmark, secret management |
 | **Install** | `git clone` → `install.ps1` → restart |
@@ -96,10 +96,13 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 ├── update.ps1               ← git pull + rebootstrap
 ├── bootstrap.ps1            ← snippet injected into $PROFILE
 ├── .gitignore
+├── lib/
+│   └── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn, shared by install.ps1/update.ps1
 ├── core/
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
 │   ├── functions.ps1        ← Edit-Profile, Reload-Profile, Get-SecretKey, mkcd
 │   ├── env.ps1              ← $env:EDITOR, PATH, DOTFILES_TOOLS
+│   ├── diag.ps1             ← ETW/PSDiagnostics tracing (Windows-only)
 │   ├── perf.ps1             ← Measure-Profile, Clear-PSCache, Optimize-ModuleLoading
 │   ├── status.ps1           ← Show-Status — global health dashboard
 │   └── extra.ps1.example    ← template for user overrides (copy to extra.ps1)

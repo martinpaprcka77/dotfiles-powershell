@@ -15,14 +15,16 @@
 [CmdletBinding(SupportsShouldProcess)]
 param()
 
-$dotfilesPwshPath = Join-Path $HOME '.config\powershell'
-$dotfilesToolsPath = Join-Path $HOME 'Projects\tools'
+# Prefer the env vars profile.ps1 already sets; fall back to the well-known
+# default (same reasoning as install.ps1).
+$dotfilesPwshPath  = if ($env:DOTFILES_PWSH)  { $env:DOTFILES_PWSH }  else { Join-Path $HOME '.config\powershell' }
+$dotfilesToolsPath = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Join-Path $HOME 'Projects\tools' }
 $updateNeeded = $false
 
-function Write-Step { param([string]$M) Write-Host "==> $M" -ForegroundColor Cyan }
-function Write-Ok   { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green }
-function Write-Skip { param([string]$M) Write-Host "  [=] $M" -ForegroundColor Gray }
-function Write-Fail { param([string]$M) Write-Host "  [x] $M" -ForegroundColor Red }
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'lib' 'output.ps1')
 
 $repos = @(
     @{ Name = 'dotfiles-powershell'; Path = $dotfilesPwshPath },
@@ -44,8 +46,16 @@ foreach ($repo in $repos) {
             # Fetch
             git fetch origin 2>&1 | Out-Null
 
+            # Resolve the actual default branch instead of assuming 'main' —
+            # the two repos could in principle differ, so this is per-repo.
+            $defaultBranch = (git symbolic-ref refs/remotes/origin/HEAD 2>$null) -replace '^refs/remotes/origin/', ''
+            if (-not $defaultBranch) {
+                $defaultBranch = 'main'
+                Write-Warn "Could not resolve default branch for $($repo.Name); assuming 'main'."
+            }
+
             # Check if behind
-            $behind = git rev-list HEAD..origin/main --count 2>&1
+            $behind = git rev-list "HEAD..origin/$defaultBranch" --count 2>&1
             if ($LASTEXITCODE -eq 0 -and [int]$behind -gt 0) {
                 Write-Step "Pulling $([int]$behind) new commits..."
                 git pull --ff-only 2>&1 | Out-Null

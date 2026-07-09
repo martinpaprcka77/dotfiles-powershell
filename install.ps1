@@ -28,10 +28,17 @@ param(
     [switch]$Force
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'lib' 'output.ps1')
+
 $script:Summary = [System.Collections.Generic.List[string]]::new()
 
-function Write-Step { param([string]$M) Write-Host "==> $M" -ForegroundColor Cyan }
-function Write-Ok  { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green;  $null = $script:Summary.Add("  [+] $M") }
+# install.ps1 needs a run summary; override the shared writers from lib/output.ps1
+# to also record each line. update.ps1 uses the shared writers unmodified — do not
+# "simplify" this by removing the overrides, the summary list depends on them.
+function Write-Ok   { param([string]$M) Write-Host "  [+] $M" -ForegroundColor Green;  $null = $script:Summary.Add("  [+] $M") }
 function Write-Skip { param([string]$M) Write-Host "  [=] $M" -ForegroundColor Gray;   $null = $script:Summary.Add("  [=] $M") }
 function Write-Fail { param([string]$M) Write-Host "  [x] $M" -ForegroundColor Red;    $null = $script:Summary.Add("  [x] $M") }
 function Write-Warn { param([string]$M) Write-Host "  [!] $M" -ForegroundColor Yellow; $null = $script:Summary.Add("  [!] $M") }
@@ -40,13 +47,25 @@ $script:restartNeeded = $false
 
 $dotfilesPwshUrl = 'https://github.com/martinpaprcka77/dotfiles-powershell.git'
 $dotfilesToolsUrl = 'https://github.com/martinpaprcka77/dotfiles-tools.git'
-$dotfilesPwshPath = Join-Path $HOME '.config\powershell'
-$dotfilesToolsPath = Join-Path $HOME 'Projects\tools'
+
+# Prefer the env vars profile.ps1 already sets (covers re-running install.ps1
+# from an already-bootstrapped session); fall back to the well-known default
+# for a true first run, where no profile session — and no env var — exists yet.
+$dotfilesPwshPath  = if ($env:DOTFILES_PWSH)  { $env:DOTFILES_PWSH }  else { Join-Path $HOME '.config\powershell' }
+$dotfilesToolsPath = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Join-Path $HOME 'Projects\tools' }
+
+# $IsWindows doesn't exist on PS5.1 (PS6+ automatic variable); PS5.1 only ever
+# runs on Windows, so treat that case as Windows too. Use this instead of the
+# raw $IsWindows anywhere below.
+$isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $true }
 
 # ── Git clone/update ──────────────────────────────────────────
 Write-Step "Setting up dotfiles repositories..."
 
 function CloneOrUpdate {
+    # Uses $PSCmdlet.ShouldProcess — must declare SupportsShouldProcess itself
+    # rather than relying on inheriting the caller's $PSCmdlet by scope accident.
+    [CmdletBinding(SupportsShouldProcess)]
     param([string]$Url, [string]$Path)
     $isRepo = Test-Path (Join-Path $Path '.git')
 
@@ -96,6 +115,8 @@ CloneOrUpdate -Url $dotfilesToolsUrl -Path $dotfilesToolsPath
 # ── Bootstrap profiles ────────────────────────────────────────
 Write-Step "Injecting bootstrap into PowerShell profiles..."
 
+# Hardcoded intentionally, same as bootstrap.ps1: this snippet runs before
+# profile.ps1 ever executes, so $env:DOTFILES_PWSH doesn't exist yet.
 $bootstrapCode = @'
 
 # Bootstrap: dotfiles-powershell
@@ -135,7 +156,15 @@ foreach ($profilePath in $profilePaths) {
                         Write-Ok "Backup: $backup"
                     }
                     if ($alreadyBootstrapped) {
-                        $newContent = $existing -replace [regex]::Escape($bootstrapCode), ''
+                        # Normalize line endings before comparing — $bootstrapCode's
+                        # CRLF/LF depends on how the source file was checked out, and
+                        # a mismatch here means -replace silently fails to match,
+                        # leaving the old block in place and appending a duplicate.
+                        # Only the comparison is normalized; output stays CRLF since
+                        # these are native Windows profile files.
+                        $normalizedExisting = $existing -replace "`r`n", "`n"
+                        $normalizedBootstrap = $bootstrapCode -replace "`r`n", "`n"
+                        $newContent = ($normalizedExisting -replace [regex]::Escape($normalizedBootstrap), '') -replace "`n", "`r`n"
                         $newContent += "`r`n$bootstrapCode"
                         Set-Content -Path $profilePath -Value $newContent -NoNewline
                     } else {
@@ -163,14 +192,19 @@ foreach ($profilePath in $profilePaths) {
 }
 
 # ── PATH setup ─────────────────────────────────────────────────
+# [Environment]::...('User') is a Windows registry-backed target — .NET
+# throws PlatformNotSupportedException for it on Linux/macOS. Session PATH
+# ($env:PATH) still works everywhere; only the persistent part is Windows-only.
 Write-Step "Setting user PATH..."
 
 $toolsBin = Join-Path $dotfilesToolsPath 'bin'
 try {
-    $currentUserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+    $currentUserPath = if ($isWindowsHost) { [Environment]::GetEnvironmentVariable('PATH', 'User') } else { $env:PATH }
     if ($toolsBin -notin ($currentUserPath -split [IO.Path]::PathSeparator)) {
         if ($PSCmdlet.ShouldProcess('User PATH', "Add $toolsBin")) {
-            [Environment]::SetEnvironmentVariable('PATH', "$toolsBin$([IO.Path]::PathSeparator)$currentUserPath", 'User')
+            if ($isWindowsHost) {
+                [Environment]::SetEnvironmentVariable('PATH', "$toolsBin$([IO.Path]::PathSeparator)$currentUserPath", 'User')
+            }
             $env:PATH = "$toolsBin$([IO.Path]::PathSeparator)$env:PATH"
             Write-Ok "Added to PATH: $toolsBin"
             $script:restartNeeded = $true
@@ -184,7 +218,7 @@ try {
 # ── Windows Terminal ───────────────────────────────────────────
 if (-not $NoTerminal) {
     $wtScript = Join-Path $dotfilesToolsPath 'scripts\Add-WTProfiles.ps1'
-    if ($IsWindows -and (Test-Path $wtScript)) {
+    if ($isWindowsHost -and (Test-Path $wtScript)) {
         $response = Read-Host "`nRun Add-WTProfiles.ps1 to configure Windows Terminal? (y/N)"
         if ($response -eq 'y' -or $response -eq 'Y') {
             if ($PSCmdlet.ShouldProcess('Windows Terminal', 'Add profiles')) {
@@ -192,7 +226,7 @@ if (-not $NoTerminal) {
             }
         }
     }
-    elseif (-not $IsWindows) {
+    elseif (-not $isWindowsHost) {
         Write-Skip "Windows Terminal setup skipped (non-Windows OS)"
     }
 }

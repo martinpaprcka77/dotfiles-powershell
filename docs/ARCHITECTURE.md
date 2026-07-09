@@ -48,9 +48,9 @@ graph TB
     subgraph "dotfiles-powershell"
         BOOTSTRAP["bootstrap.ps1<br/>(vložený kód)"]
         PROFILE["profile.ps1<br/>(hlavní orchestrátor)"]
-        CORE["core/<br/>aliases · functions · env"]
+        CORE["core/<br/>aliases · functions · env · diag · perf · status"]
         PS_VER["ps5/ · ps7/<br/>verze-specifické"]
-        HOSTS["hosts/<br/>ConsoleHost · VSCode"]
+        HOSTS["hosts/<br/>ConsoleHost · VSCode · wtprofile · shell-integration"]
     end
 
     subgraph "Externí závislosti"

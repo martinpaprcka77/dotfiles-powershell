@@ -14,7 +14,12 @@ function Show-Status {
     Write-Host "   $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
     Write-Host "   $(('─' * 55))" -ForegroundColor DarkGray
 
-    $ok = 0; $warn = 0; $fail = 0
+    # Dot() is nested inside Show-Status and increments via $script:, so these
+    # counters must be declared at $script: scope too, or the final tally always
+    # reads 0/0/0 — Dot's $script:ok++ and this function's own bare $ok are two
+    # different variables otherwise. Show-Status resets them on every call, so
+    # this doesn't leak state between invocations.
+    $script:ok = 0; $script:warn = 0; $script:fail = 0
 
     function Dot { param([string]$L, [string]$S, [string]$Extra)
         $c = if ($S -eq '✅') { $script:ok++; 'Green' } elseif ($S -eq '⚠️') { $script:warn++; 'Yellow' } else { $script:fail++; 'Red' }
@@ -25,10 +30,10 @@ function Show-Status {
 
     # ── Dotfiles ───────────────────────────────────────────────
     Write-Host "`n   DOTFILES" -ForegroundColor Cyan
-    Dot 'Main profile'        $(if (Test-Path (Join-Path $HOME '.config\powershell\profile.ps1')) { '✅' } else { '❌' })
+    Dot 'Main profile'        $(if (Test-Path (Join-Path $env:DOTFILES_PWSH 'profile.ps1')) { '✅' } else { '❌' })
     Dot 'Bootstrap (PS7)'     $(if ((Test-Path "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1") -and (Get-Content "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
     Dot 'Bootstrap (PS5)'     $(if ((Test-Path "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1") -and (Get-Content "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
-    Dot 'tools/bin in PATH'   $(if ((Join-Path $HOME 'Projects\tools\bin') -in ($env:PATH -split [IO.Path]::PathSeparator)) { '✅' } else { '⚠️' })
+    Dot 'tools/bin in PATH'   $(if ((Join-Path $env:DOTFILES_TOOLS 'bin') -in ($env:PATH -split [IO.Path]::PathSeparator)) { '✅' } else { '⚠️' })
     Dot '$env:DOTFILES_PWSH'  $(if ($env:DOTFILES_PWSH) { '✅' } else { '⚠️' })
     Dot '$env:DOTFILES_TOOLS' $(if ($env:DOTFILES_TOOLS) { '✅' } else { '⚠️' })
 
@@ -61,8 +66,8 @@ function Show-Status {
     # ── Git ────────────────────────────────────────────────────
     Write-Host "`n   GIT" -ForegroundColor Cyan
     Dot 'Git installed'       $(if (Get-Command git -ErrorAction SilentlyContinue) { '✅' } else { '❌' })
-    Dot 'powershell repo'     $(if (Test-Path (Join-Path $HOME '.config\powershell\.git')) { '✅' } else { '⚠️' })
-    Dot 'tools repo'          $(if (Test-Path (Join-Path $HOME 'Projects\tools\.git')) { '✅' } else { '⚠️' })
+    Dot 'powershell repo'     $(if (Test-Path (Join-Path $env:DOTFILES_PWSH '.git')) { '✅' } else { '⚠️' })
+    Dot 'tools repo'          $(if (Test-Path (Join-Path $env:DOTFILES_TOOLS '.git')) { '✅' } else { '⚠️' })
 
     # ── Docker ─────────────────────────────────────────────────
     Write-Host "`n   DOCKER" -ForegroundColor Cyan

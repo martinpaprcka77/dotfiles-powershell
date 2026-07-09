@@ -11,11 +11,21 @@
     Sources: https://github.com/ChrisTitusTech/powershell-profile
 #>
 
+Set-StrictMode -Version Latest
+
 # Only activate in Windows Terminal
 if (-not $env:WT_SESSION) { return }
 
 # ── Telemetry opt-out ──────────────────────────────────────────
-[System.Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'User')
+# Windows-only (registry write via the User environment-variable store; throws
+# PlatformNotSupportedException on Linux/macOS). Check-before-write so this
+# doesn't touch the registry on every single session start.
+$isWindowsHost = $PSVersionTable.PSVersion.Major -lt 6 -or $IsWindows
+if ($isWindowsHost) {
+    if ([System.Environment]::GetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', 'User') -ne '1') {
+        [System.Environment]::SetEnvironmentVariable('POWERSHELL_TELEMETRY_OPTOUT', '1', 'User')
+    }
+}
 
 # ── zoxide — smart directory jumper ────────────────────────────
 # https://github.com/ajeetdsouza/zoxide
@@ -85,10 +95,16 @@ function touch {
 <#
 .SYNOPSIS
     Přesune soubor/adresář do Koše (místo trvalého smazání).
+.NOTES
+    Windows-only (Microsoft.VisualBasic.FileIO.FileSystem / Recycle Bin).
 #>
 function trash {
     [CmdletBinding()]
     param([string]$Path)
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "trash is Windows-only (uses Recycle Bin). Use Remove-Item instead."
+        return
+    }
     if (-not (Test-Path $Path)) { Write-Warning "Not found: $Path"; return }
     if (Test-Path $Path -PathType Container) {
         [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($Path, 'OnlyErrorDialogs', 'SendToRecycleBin')
@@ -170,15 +186,27 @@ function pkill {
 #>
 function k9 {
     [CmdletBinding()]
-    param([string]$Name) pkill $Name }
+    param([string]$Name)
+    pkill $Name
+}
 
 <#
 .SYNOPSIS
     Zobrazí dobu běhu systému.
+.NOTES
+    Windows-only (Win32_OperatingSystem CIM class). Get-Command guard because
+    a missing cmdlet is a "command not found" error, which -ErrorAction does
+    not suppress — only a Get-Command check (or try/catch) does.
 #>
 function uptime {
     [CmdletBinding()]
-    $os = Get-CimInstance -ClassName Win32_OperatingSystem
+    param()
+    if (-not (Get-Command Get-CimInstance -ErrorAction SilentlyContinue)) {
+        Write-Warning "uptime requires Get-CimInstance (Windows-only)."
+        return
+    }
+    $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+    if (-not $os) { Write-Warning "Could not query system uptime."; return }
     $uptime = (Get-Date) - $os.LastBootUpTime
     "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"
 }
@@ -197,6 +225,7 @@ Set-Alias -Name grep  -Value Select-String
 #>
 function Show-Help {
     [CmdletBinding()]
+    param()
     # $PSStyle only exists in PS7+; fallback to plain text on PS5
     $s = if ($PSVersionTable.PSVersion.Major -ge 7) { $PSStyle } else { $null }
     $m = if ($s) { $s.Foreground.BrightMagenta } else { '' }; $r = if ($s) { $s.Reset } else { '' }
