@@ -11,7 +11,11 @@
 $Host.UI.RawUI.WindowTitle = "PowerShell $($PSVersionTable.PSVersion)"
 
 # Welcome message
-$os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+# Get-CimInstance is Windows-only; a missing cmdlet is "command not found",
+# which -ErrorAction does not suppress — guard with Get-Command first.
+$os = if (Get-Command Get-CimInstance -ErrorAction SilentlyContinue) {
+    Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+}
 $uptime = if ($os) { (Get-Date) - $os.LastBootUpTime }
 $uptimeStr = if ($uptime) { "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m" } else { "unknown" }
 

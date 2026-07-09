@@ -14,7 +14,7 @@
 function Edit-Profile {
     [CmdletBinding()]
     param()
-    $profilePath = Join-Path $HOME '.config\powershell\profile.ps1'
+    $profilePath = Join-Path $env:DOTFILES_PWSH 'profile.ps1'
     $editor = if ($env:EDITOR) { $env:EDITOR } elseif (Get-Command code -ErrorAction SilentlyContinue) { 'code' } else { 'notepad' }
     & $editor $profilePath
 }
@@ -26,7 +26,7 @@ function Edit-Profile {
 function Reload-Profile {
     [CmdletBinding()]
     param()
-    $profilePath = Join-Path $HOME '.config\powershell\profile.ps1'
+    $profilePath = Join-Path $env:DOTFILES_PWSH 'profile.ps1'
     if (Test-Path $profilePath) {
         . $profilePath
         Write-Host "Profile reloaded." -ForegroundColor Green
@@ -75,10 +75,17 @@ function Get-SecretKey {
 <#
 .SYNOPSIS
     Zjistí, zda je aktuální session spuštěna jako administrátor.
+.NOTES
+    Windows-only. $IsWindows doesn't exist on PS5.1 (it's a PS6+ automatic
+    variable) — PS5.1 only ever runs on Windows, so the version check covers it.
 #>
 function Test-Admin {
     [CmdletBinding()]
     param()
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
+        Write-Warning "Test-Admin is Windows-only."
+        return $false
+    }
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]$identity
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
