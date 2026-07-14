@@ -8,6 +8,36 @@
     Cesta: ~/.config/powershell/core/status.ps1
 #>
 
+<#
+.SYNOPSIS
+    Reports duplicate PATH entries, and (Windows only) overlap between the
+    User- and Machine-scope PATH that Windows concatenates into the process
+    PATH — a common source of "why is this here twice" confusion.
+.DESCRIPTION
+    Read-only — never modifies PATH. For PSModulePath specifically (a
+    related but separate concern, including OneDrive-pollution detection),
+    see Test-PSModulePath / Reset-PSModulePath in the dotfiles-tools repo.
+#>
+function Test-PathHealth {
+    [CmdletBinding()]
+    param()
+    $entries = $env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }
+    $normalized = $entries | ForEach-Object { $_.TrimEnd('\', '/').ToLowerInvariant() }
+    $duplicates = $normalized | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name }
+
+    $result = @{ Duplicates = @($duplicates); MachineUserOverlap = $null }
+
+    if ($isWindowsHost) {
+        $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User') -split [IO.Path]::PathSeparator | Where-Object { $_ }
+        $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine') -split [IO.Path]::PathSeparator | Where-Object { $_ }
+        $userNorm = $userPath | ForEach-Object { $_.TrimEnd('\', '/').ToLowerInvariant() }
+        $machineNorm = $machinePath | ForEach-Object { $_.TrimEnd('\', '/').ToLowerInvariant() }
+        $result.MachineUserOverlap = @($userNorm | Where-Object { $_ -in $machineNorm })
+    }
+
+    return $result
+}
+
 function Show-Status {
     [CmdletBinding()]
     param()
@@ -28,11 +58,22 @@ function Show-Status {
         Write-Host $line -ForegroundColor $c
     }
 
+    # ── Environment ────────────────────────────────────────────
+    # Username/hostname/host-type/WT-session — each already computed
+    # somewhere in this ecosystem (welcome banner, profile.ps1 host
+    # detection, WT guards) but never all shown together in one place.
+    Write-Host "`n   ENVIRONMENT" -ForegroundColor Cyan
+    Dot 'User@Host'           '✅' "$env:USERNAME@$env:COMPUTERNAME"
+    Dot 'PowerShell host'     '✅' "$($Host.Name) ($($PSVersionTable.PSEdition), v$($PSVersionTable.PSVersion))"
+    Dot 'Windows Terminal'    $(if ($env:WT_SESSION) { '✅' } else { '⚠️' }) $(if ($env:WT_SESSION) { 'active session' } else { 'not detected' })
+    Dot 'Working directory'   '✅' (Get-Location).Path
+
     # ── Dotfiles ───────────────────────────────────────────────
     Write-Host "`n   DOTFILES" -ForegroundColor Cyan
+    $nativeProfiles = Get-NativeProfilePaths
     Dot 'Main profile'        $(if (Test-Path (Join-Path $env:DOTFILES_PWSH 'profile.ps1')) { '✅' } else { '❌' })
-    Dot 'Bootstrap (PS7)'     $(if ((Test-Path "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1") -and (Get-Content "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
-    Dot 'Bootstrap (PS5)'     $(if ((Test-Path "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1") -and (Get-Content "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
+    Dot 'Bootstrap (PS7)'     $(if ((Test-Path $nativeProfiles[0]) -and (Get-Content $nativeProfiles[0] -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
+    Dot 'Bootstrap (PS5)'     $(if ((Test-Path $nativeProfiles[2]) -and (Get-Content $nativeProfiles[2] -Raw -ErrorAction SilentlyContinue) -match 'Bootstrap') { '✅' } else { '⚠️' })
     Dot 'tools/bin in PATH'   $(if ((Join-Path $env:DOTFILES_TOOLS 'bin') -in ($env:PATH -split [IO.Path]::PathSeparator)) { '✅' } else { '⚠️' })
     Dot '$env:DOTFILES_PWSH'  $(if ($env:DOTFILES_PWSH) { '✅' } else { '⚠️' })
     Dot '$env:DOTFILES_TOOLS' $(if ($env:DOTFILES_TOOLS) { '✅' } else { '⚠️' })
@@ -75,6 +116,14 @@ function Show-Status {
     if (Get-Command docker -ErrorAction SilentlyContinue) {
         $running = (docker ps -q 2>$null | Measure-Object).Count
         Dot "  Running containers" '✅' "$running"
+    }
+
+    # ── PATH health ──────────────────────────────────────────────
+    Write-Host "`n   PATH" -ForegroundColor Cyan
+    $pathReport = Test-PathHealth
+    Dot 'Duplicate PATH entries' $(if ($pathReport.Duplicates.Count -eq 0) { '✅' } else { '⚠️' }) "$($pathReport.Duplicates.Count) found"
+    if ($pathReport.MachineUserOverlap) {
+        Dot 'User/Machine PATH overlap' $(if ($pathReport.MachineUserOverlap.Count -eq 0) { '✅' } else { '⚠️' }) "$($pathReport.MachineUserOverlap.Count) found"
     }
 
     # ── Summary ────────────────────────────────────────────────

@@ -32,6 +32,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'lib' 'output.ps1')
+. (Join-Path $PSScriptRoot 'lib' 'paths.ps1')
 
 $script:Summary = [System.Collections.Generic.List[string]]::new()
 
@@ -58,6 +59,12 @@ $dotfilesToolsPath = if ($env:DOTFILES_TOOLS) { $env:DOTFILES_TOOLS } else { Joi
 # runs on Windows, so treat that case as Windows too. Use this instead of the
 # raw $IsWindows anywhere below.
 $isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $true }
+
+# ── Preflight ──────────────────────────────────────────────────
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Fail "git is required but not found on PATH. Install it first: https://git-scm.com/downloads"
+    exit 1
+}
 
 # ── Git clone/update ──────────────────────────────────────────
 Write-Step "Setting up dotfiles repositories..."
@@ -124,12 +131,9 @@ $dotfilesProfile = Join-Path $HOME '.config\powershell\profile.ps1'
 if (Test-Path $dotfilesProfile) { . $dotfilesProfile }
 '@
 
-$profilePaths = @(
-    "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1",
-    "$HOME\Documents\PowerShell\Microsoft.VSCode_profile.ps1",
-    "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1",
-    "$HOME\Documents\WindowsPowerShell\Microsoft.VSCode_profile.ps1"
-)
+# Known-Folder-correct — not a naive $HOME\Documents guess, which is wrong
+# when OneDrive redirects Documents elsewhere. See lib/paths.ps1.
+$profilePaths = Get-NativeProfilePaths
 
 foreach ($profilePath in $profilePaths) {
     $profileDir = Split-Path $profilePath -Parent
