@@ -1,5 +1,12 @@
 # dotfiles-powershell
 
+> ⚠️ **This repo has moved.** Development continues at
+> **[martinpaprcka77/martinpaprcka77.github.io](https://github.com/martinpaprcka77/martinpaprcka77.github.io)**
+> (`profile/` subfolder) — merged with `dotfiles-tools` into one repo to eliminate cross-repo
+> coupling. This repo is kept for history; it will not receive further updates.
+>
+> One-command install (new repo): `irm https://raw.githubusercontent.com/martinpaprcka77/martinpaprcka77.github.io/main/remote-install.ps1 | iex`
+
 > **Modular, version-controlled PowerShell profile** — bypasses OneDrive, auto-detects PS version & host, portable across machines.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--powershell-blue)](#)
