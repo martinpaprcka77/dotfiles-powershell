@@ -29,19 +29,44 @@
 function Resolve-DocumentsPath {
     [CmdletBinding()]
     param()
+    $fallback = Join-Path $HOME 'Documents'
+
+    $candidate = $null
     if ($PROFILE -and $PROFILE.CurrentUserAllHosts) {
         # .../Documents/PowerShell/... (PS7) or .../Documents/WindowsPowerShell/... (PS5.1)
-        return Split-Path (Split-Path $PROFILE.CurrentUserAllHosts -Parent) -Parent
+        $candidate = Split-Path (Split-Path $PROFILE.CurrentUserAllHosts -Parent) -Parent
     }
-    try {
-        $p = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
-        if ($p) { return $p }
-    } catch { }
-    try {
-        $v = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Personal -ErrorAction Stop).Personal
-        if ($v) { return [Environment]::ExpandEnvironmentVariables($v) }
-    } catch { }
-    return Join-Path $HOME 'Documents'
+    if (-not (Test-RootedPath $candidate)) {
+        try {
+            $p = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
+            if (Test-RootedPath $p) { $candidate = $p }
+        } catch { }
+    }
+    if (-not (Test-RootedPath $candidate)) {
+        try {
+            $v = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Personal -ErrorAction Stop).Personal
+            # Expand a well-formed %VAR%\... template; a still-unrooted result here
+            # (e.g. a malformed literal like '%C:\Users\x%\Documents' — seen in the
+            # wild from broken OneDrive Known Folder Move migrations, where
+            # ExpandEnvironmentVariables can't match anything and returns it
+            # unchanged) falls through to the plain $HOME\Documents fallback below.
+            if ($v) { $v = [Environment]::ExpandEnvironmentVariables($v) }
+            if (Test-RootedPath $v) { $candidate = $v }
+        } catch { }
+    }
+    if (Test-RootedPath $candidate) { return $candidate }
+    return $fallback
+}
+
+<#
+.SYNOPSIS
+    True if $Path is a real rooted filesystem path (drive-letter or UNC) —
+    not $null/empty and not a leftover '%...%' placeholder that Known-Folder
+    resolution failed to expand.
+#>
+function Test-RootedPath {
+    param([string]$Path)
+    return $Path -and ($Path -match '^[A-Za-z]:\\' -or $Path -match '^\\\\') -and ($Path -notmatch '%')
 }
 
 <#
