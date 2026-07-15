@@ -38,9 +38,11 @@
 │   ├── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn — shared by install.ps1/update.ps1
 │   │                           only (NOT auto-loaded into the profile like core/ — these two
 │   │                           scripts run standalone, often before a profile session exists)
-│   └── paths.ps1            ← Resolve-DocumentsPath/Get-NativeProfilePaths — Known-Folder-correct
-│                               (OneDrive-safe) $PROFILE paths, dot-sourced by profile.ps1 and
-│                               used by install.ps1/core/status.ps1
+│   └── paths.ps1            ← Resolve-DocumentsPath/Test-RootedPath/Get-NativeProfilePaths —
+│                               Known-Folder-correct (OneDrive-safe) $PROFILE paths, dot-sourced
+│                               by profile.ps1 and used by install.ps1/core/status.ps1; every
+│                               candidate is validated before use (a corrupted Known Folder
+│                               registry value falls back to $HOME\Documents instead of crashing)
 │
 ├── core/                    ← ALWAYS loaded (shared across all PS versions/hosts)
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
@@ -129,7 +131,8 @@ use `$env:DOTFILES_FORCE` / `$env:DOTFILES_NO_UPDATES` / `$env:DOTFILES_NO_TERMI
 ### New in 2026
 - `core/extra.ps1` — gitignored user overrides, auto-sourced
 - `remote-install.ps1` — one-command `irm | iex` bootstrapper
-- `lib/paths.ps1` — Known-Folder-correct (OneDrive-safe) `$PROFILE` path resolution
+- `lib/paths.ps1` — Known-Folder-correct (OneDrive-safe) `$PROFILE` path resolution, with
+  `Test-RootedPath` validation against corrupted Known Folder registry values (field-reported)
 - `core/status.ps1` — `Test-PathHealth` (PATH duplicates, User/Machine PATH overlap) + Environment
   section (user, host, PS edition/version, WT session, cwd)
 - `deps.ps1` (tools) — winget-based package installer for fresh machines
@@ -161,6 +164,12 @@ use `$env:DOTFILES_FORCE` / `$env:DOTFILES_NO_UPDATES` / `$env:DOTFILES_NO_TERMI
   exceptions, since they run before those env vars exist
 - **Native `$PROFILE` paths**: never hardcode `$HOME\Documents\...` — OneDrive can redirect
   Documents elsewhere. Use `Get-NativeProfilePaths`/`Resolve-DocumentsPath` from `lib/paths.ps1`
+- **Known Folder / registry-derived paths**: validate before use, don't trust the first non-null
+  value. A real machine had a corrupted `User Shell Folders\Personal` registry value
+  (`%C:\Users\x%\Documents` — percent-wraps an already-resolved path) that survived
+  `[Environment]::ExpandEnvironmentVariables()` unchanged and crashed `Join-Path` further down
+  the chain. `lib/paths.ps1`'s `Test-RootedPath` is the pattern to reuse: confirm a real
+  drive-letter/UNC prefix and no leftover `%` before accepting a candidate
 - **Alias/function naming**: check `Get-Command -CommandType Alias <name>` before adding a short
   function name — a built-in PowerShell alias silently wins over a same-named function with no
   error (bit `gcm`/`gps` in `core/aliases.ps1` once; fixed via `Remove-Item Alias:<name> -Force`

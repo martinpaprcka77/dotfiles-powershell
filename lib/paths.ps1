@@ -2,15 +2,23 @@
 .SYNOPSIS
     Known-Folder-correct path resolution for install.ps1.
 .DESCRIPTION
-    Resolve-DocumentsPath / Get-NativeProfilePaths — used only by install.ps1
-    (dot-sourced from there, not part of the profile-loading chain and not
-    auto-loaded like core/*.ps1). OneDrive can redirect Documents away from
-    a naive $HOME\Documents assumption; the 4 native $PROFILE paths
-    install.ps1 injects a bootstrap snippet into all live under Documents,
-    so getting this right matters there specifically. (~/.config/powershell
-    and ~/Projects/tools are NOT Known-Folder redirection targets — OneDrive
-    only redirects Desktop/Documents/Pictures/Music/Videos — so nothing else
-    in this ecosystem needs this.)
+    Resolve-DocumentsPath / Test-RootedPath / Get-NativeProfilePaths — used
+    only by install.ps1 (dot-sourced from there, not part of the
+    profile-loading chain and not auto-loaded like core/*.ps1). OneDrive can
+    redirect Documents away from a naive $HOME\Documents assumption; the 4
+    native $PROFILE paths install.ps1 injects a bootstrap snippet into all
+    live under Documents, so getting this right matters there specifically.
+    (~/.config/powershell and ~/Projects/tools are NOT Known-Folder
+    redirection targets — OneDrive only redirects
+    Desktop/Documents/Pictures/Music/Videos — so nothing else in this
+    ecosystem needs this.)
+
+    Every Documents-source candidate is validated with Test-RootedPath
+    before use — a real-world corrupted Known Folder registry value
+    (`User Shell Folders\Personal` = `%C:\Users\x%\Documents`, seen on a
+    machine with a broken OneDrive Known Folder Move migration) survives
+    ExpandEnvironmentVariables unchanged and would otherwise crash Join-Path
+    with "Cannot find drive" further down the chain.
 .NOTES
     Cesta: ~/.config/powershell/lib/paths.ps1
 #>

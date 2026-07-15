@@ -12,7 +12,7 @@ Companion: `dotfiles-tools` at `~/Projects/tools/`.
 - `remote-install.ps1` — one-command bootstrapper, safe to run via `irm | iex` (no `SupportsShouldProcess` — `$PSCmdlet` is `$null` under `Invoke-Expression`)
 - `update.ps1` — git pull + profile reload
 - `lib/output.ps1` — shared Write-Step/Ok/Skip/Fail/Warn for install.ps1/update.ps1 (not auto-loaded like core/)
-- `lib/paths.ps1` — `Resolve-DocumentsPath`/`Get-NativeProfilePaths`, Known-Folder-correct (OneDrive-safe) `$PROFILE` targets, reused by `install.ps1` and `core/status.ps1`
+- `lib/paths.ps1` — `Resolve-DocumentsPath`/`Get-NativeProfilePaths`, Known-Folder-correct (OneDrive-safe) `$PROFILE` targets, reused by `install.ps1` and `core/status.ps1`; every candidate source is validated with `Test-RootedPath` before use, so a corrupted Known Folder registry value (field-reported: `%C:\Users\x%\Documents`) falls back to `$HOME\Documents` instead of crashing `Join-Path`
 - `core/functions.ps1` — Edit-Profile, Reload-Profile, Get-SecretKey, mkcd
 - `core/status.ps1`, `core/perf.ps1`, `core/diag.ps1` — health dashboard (incl. `Test-PathHealth` PATH-duplicate/User-Machine-overlap check), load-time profiling, ETW tracing (Windows-only)
 
@@ -30,6 +30,10 @@ Companion: `dotfiles-tools` at `~/Projects/tools/`.
   avoids duplicate `$PSVersionTable` checks
 - Before naming a short function/alias: check `Get-Command -CommandType Alias` first — a built-in
   alias silently wins over a same-named function (bit `gcm`/`gps` once, see AGENTS.md)
+- Never trust a Known Folder/registry-derived path unvalidated — Windows can have a genuinely
+  corrupted `User Shell Folders` value (field-reported); `lib/paths.ps1`'s `Test-RootedPath`
+  checks every candidate looks like a real drive-letter/UNC path (no leftover `%...%`) before
+  it's used, falling back instead of crashing
 
 ## How to build/test
 - No build step — just dot-source to apply
