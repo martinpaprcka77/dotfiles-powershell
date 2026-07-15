@@ -26,16 +26,21 @@
 ~/.config/powershell/
 ├── profile.ps1              ← MAIN ORCHESTRATOR — dot-sources everything below
 ├── install.ps1              ← idempotent installer (runs git clone, injects bootstrap)
+├── remote-install.ps1       ← one-command bootstrapper, safe via `irm <url> | iex`
 ├── update.ps1               ← git pull + reload profile
 ├── bootstrap.ps1            ← minimal snippet injected into $PROFILE
+├── starship.toml            ← Starship prompt config (30+ modules)
 ├── index.html               ← GitHub Pages landing page
 ├── .nojekyll                ← disables Jekyll for Pages
 ├── .gitignore
 │
 ├── lib/
-│   └── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn — shared by install.ps1/update.ps1
-│                               only (NOT auto-loaded into the profile like core/ — these two
-│                               scripts run standalone, often before a profile session exists)
+│   ├── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn — shared by install.ps1/update.ps1
+│   │                           only (NOT auto-loaded into the profile like core/ — these two
+│   │                           scripts run standalone, often before a profile session exists)
+│   └── paths.ps1            ← Resolve-DocumentsPath/Get-NativeProfilePaths — Known-Folder-correct
+│                               (OneDrive-safe) $PROFILE paths, dot-sourced by profile.ps1 and
+│                               used by install.ps1/core/status.ps1
 │
 ├── core/                    ← ALWAYS loaded (shared across all PS versions/hosts)
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
@@ -60,7 +65,7 @@
 │                               (not from host detection, so PS5 never gets it)
 │
 └── docs/
-    ├── ARCHITECTURE.md       ← 4 Mermaid UML diagrams
+    ├── ARCHITECTURE.md       ← Mermaid UML diagrams
     ├── PURPOSE.md            ← design rationale & decisions
     └── PROMPT.md             ← original AI prompt that generated this project
 ```
@@ -71,12 +76,14 @@
 
 ```
 PowerShell starts
-  → $PROFILE (bootstrap snippet)
+  → $PROFILE (bootstrap snippet, at the Known-Folder-correct Documents path)
     → profile.ps1
+      → detect environment once: $isPSCore ($PSVersionTable.PSVersion.Major -ge 6),
+        $isWindowsHost ($IsWindows on PS7+, always $true on PS5.1 — $IsWindows doesn't exist there)
       → set $env:DOTFILES_PWSH, $env:DOTFILES_TOOLS
-      → fix PSModulePath (PS7: prepend LOCALAPPDATA)
-      → dot-source core/*.ps1
-      → dot-source ps5/ or ps7/ (based on $PSVersionTable)
+      → fix PSModulePath (PS5.1 and PS7 both: prepend LOCALAPPDATA, never Documents — OneDrive-safe)
+      → dot-source lib/paths.ps1, core/*.ps1
+      → dot-source ps5/ or ps7/ (based on $isPSCore)
         (ps7/profile.ps1 additionally dot-sources hosts/shell-integration.ps1
          directly — not via host detection, so this never runs on PS5)
       → dot-source hosts/ConsoleHost or VSCode (based on $host.Name)
@@ -90,13 +97,23 @@ PowerShell starts
 
 ## How to install
 
+One command, from any shell that has a PowerShell host on PATH:
+
+```powershell
+irm https://raw.githubusercontent.com/martinpaprcka77/dotfiles-powershell/main/remote-install.ps1 | iex
+```
+
+Or manually, for full parameter parity:
+
 ```powershell
 git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/powershell
 ~/.config/powershell/install.ps1
 # Restart PowerShell
 ```
 
-`install.ps1` is idempotent — supports `-WhatIf`, `-Force`, `-NoUpdates`.
+`install.ps1` is idempotent — supports `-WhatIf`, `-Force`, `-NoUpdates`, `-NoTerminal`.
+`remote-install.ps1` doesn't accept switches directly (can't reach parameters through `iex`) —
+use `$env:DOTFILES_FORCE` / `$env:DOTFILES_NO_UPDATES` / `$env:DOTFILES_NO_TERMINAL` instead.
 
 ---
 
@@ -111,9 +128,14 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 
 ### New in 2026
 - `core/extra.ps1` — gitignored user overrides, auto-sourced
+- `remote-install.ps1` — one-command `irm | iex` bootstrapper
+- `lib/paths.ps1` — Known-Folder-correct (OneDrive-safe) `$PROFILE` path resolution
+- `core/status.ps1` — `Test-PathHealth` (PATH duplicates, User/Machine PATH overlap) + Environment
+  section (user, host, PS edition/version, WT session, cwd)
 - `deps.ps1` (tools) — winget-based package installer for fresh machines
 - `windows.ps1` (tools) — Explorer, taskbar, privacy defaults
 - `Add-WTProfiles.ps1` — now generates JSON fragment extensions (WT 1.24+)
+- `lib/detectors.ps1` (tools) — live status detectors wired into every menu item
 - `.vscode/` — committed settings.json + tasks.json in tools repo
 
 ---
@@ -137,6 +159,12 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
   `$env:DOTFILES_TOOLS` over hardcoding once a profile session exists (see `core/functions.ps1`,
   `core/status.ps1`) — `bootstrap.ps1` and `install.ps1`'s injected snippet are the deliberate
   exceptions, since they run before those env vars exist
+- **Native `$PROFILE` paths**: never hardcode `$HOME\Documents\...` — OneDrive can redirect
+  Documents elsewhere. Use `Get-NativeProfilePaths`/`Resolve-DocumentsPath` from `lib/paths.ps1`
+- **Alias/function naming**: check `Get-Command -CommandType Alias <name>` before adding a short
+  function name — a built-in PowerShell alias silently wins over a same-named function with no
+  error (bit `gcm`/`gps` in `core/aliases.ps1` once; fixed via `Remove-Item Alias:<name> -Force`
+  before the function definition)
 
 ---
 
@@ -152,8 +180,9 @@ if ($PSVersionTable.PSVersion.Major -ge 6) { "PS7" } else { "PS5" }
 # Detect host
 if ($host.Name -match 'Code') { 'VSCode' } else { 'ConsoleHost' }
 
-# Fix PSModulePath for PS7 (bypass OneDrive)
-$localModules = "$env:LOCALAPPDATA\PowerShell\Modules"
+# Fix PSModulePath (bypass OneDrive) — PS5.1 and PS7 both, different subfolder names
+$moduleDir = if ($isPSCore) { 'PowerShell' } else { 'WindowsPowerShell' }
+$localModules = "$env:LOCALAPPDATA\$moduleDir\Modules"
 if ($localModules -notin ($env:PSModulePath -split [IO.Path]::PathSeparator)) {
     $env:PSModulePath = "$localModules$([IO.Path]::PathSeparator)$env:PSModulePath"
 }

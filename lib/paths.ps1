@@ -1,0 +1,64 @@
+<#
+.SYNOPSIS
+    Known-Folder-correct path resolution for install.ps1.
+.DESCRIPTION
+    Resolve-DocumentsPath / Get-NativeProfilePaths — used only by install.ps1
+    (dot-sourced from there, not part of the profile-loading chain and not
+    auto-loaded like core/*.ps1). OneDrive can redirect Documents away from
+    a naive $HOME\Documents assumption; the 4 native $PROFILE paths
+    install.ps1 injects a bootstrap snippet into all live under Documents,
+    so getting this right matters there specifically. (~/.config/powershell
+    and ~/Projects/tools are NOT Known-Folder redirection targets — OneDrive
+    only redirects Desktop/Documents/Pictures/Music/Videos — so nothing else
+    in this ecosystem needs this.)
+.NOTES
+    Cesta: ~/.config/powershell/lib/paths.ps1
+#>
+
+<#
+.SYNOPSIS
+    Resolves the real (possibly OneDrive-redirected) Documents folder.
+.DESCRIPTION
+    Reuses PowerShell's own already-correct $PROFILE.CurrentUserAllHosts —
+    the engine itself resolves Documents internally to compute $PROFILE, so
+    this piggybacks on that instead of re-implementing Known-Folder lookup.
+    Falls back to .NET's SpecialFolder API, then a direct registry read, for
+    the rare case $PROFILE isn't populated (should not normally happen —
+    it's always set by the engine, even non-interactively).
+#>
+function Resolve-DocumentsPath {
+    [CmdletBinding()]
+    param()
+    if ($PROFILE -and $PROFILE.CurrentUserAllHosts) {
+        # .../Documents/PowerShell/... (PS7) or .../Documents/WindowsPowerShell/... (PS5.1)
+        return Split-Path (Split-Path $PROFILE.CurrentUserAllHosts -Parent) -Parent
+    }
+    try {
+        $p = [Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)
+        if ($p) { return $p }
+    } catch { }
+    try {
+        $v = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -Name Personal -ErrorAction Stop).Personal
+        if ($v) { return [Environment]::ExpandEnvironmentVariables($v) }
+    } catch { }
+    return Join-Path $HOME 'Documents'
+}
+
+<#
+.SYNOPSIS
+    Returns the 4 native $PROFILE paths install.ps1 injects a bootstrap
+    snippet into, built from the real (Known-Folder-correct) Documents path.
+#>
+function Get-NativeProfilePaths {
+    [CmdletBinding()]
+    param()
+    $docs = Resolve-DocumentsPath
+    $ps7Dir = Join-Path $docs 'PowerShell'
+    $ps5Dir = Join-Path $docs 'WindowsPowerShell'
+    @(
+        Join-Path $ps7Dir 'Microsoft.PowerShell_profile.ps1'
+        Join-Path $ps7Dir 'Microsoft.VSCode_profile.ps1'
+        Join-Path $ps5Dir 'Microsoft.PowerShell_profile.ps1'
+        Join-Path $ps5Dir 'Microsoft.VSCode_profile.ps1'
+    )
+}

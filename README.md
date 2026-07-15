@@ -3,7 +3,7 @@
 > **Modular, version-controlled PowerShell profile** — bypasses OneDrive, auto-detects PS version & host, portable across machines.
 
 [![repo](https://img.shields.io/badge/repo-dotfiles--powershell-blue)](#)
-[![files](https://img.shields.io/badge/files-17_scripts-green)](#)
+[![files](https://img.shields.io/badge/files-19_scripts-green)](#)
 [![ps](https://img.shields.io/badge/PowerShell-5.1_|_7+-blue)](https://github.com/PowerShell/PowerShell)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
@@ -28,10 +28,10 @@
 | What | Details |
 |------|---------|
 | **Location** | `~/.config/powershell/` (XDG convention, outside OneDrive) |
-| **17 scripts** | `profile.ps1`, `install.ps1`, `update.ps1`, `bootstrap.ps1`, `lib/output.ps1`, `core/aliases.ps1`, `core/functions.ps1`, `core/env.ps1`, `core/diag.ps1`, `core/perf.ps1`, `core/status.ps1`, `ps5/profile.ps1`, `ps7/profile.ps1`, `hosts/ConsoleHost.ps1`, `hosts/VSCode.ps1`, `hosts/wtprofile.ps1`, `hosts/shell-integration.ps1` |
+| **19 scripts** | `profile.ps1`, `install.ps1`, `remote-install.ps1`, `update.ps1`, `bootstrap.ps1`, `lib/output.ps1`, `lib/paths.ps1`, `core/aliases.ps1`, `core/functions.ps1`, `core/env.ps1`, `core/diag.ps1`, `core/perf.ps1`, `core/status.ps1`, `ps5/profile.ps1`, `ps7/profile.ps1`, `hosts/ConsoleHost.ps1`, `hosts/VSCode.ps1`, `hosts/wtprofile.ps1`, `hosts/shell-integration.ps1` |
 | **3 docs** | ARCHITECTURE, PURPOSE, PROMPT |
-| **Key features** | PS5/7 auto-detection, ConsoleHost/VSCode detection, PSModulePath fix, profile benchmark, secret management |
-| **Install** | `git clone` → `install.ps1` → restart |
+| **Key features** | PS5/7 auto-detection, ConsoleHost/VSCode detection, PSModulePath fix (both PS5.1 and PS7), Known-Folder-correct paths (OneDrive-safe), profile benchmark, secret management |
+| **Install** | One command: `irm <raw-url>/remote-install.ps1 \| iex` — or `git clone` → `install.ps1` → restart |
 
 ---
 
@@ -72,18 +72,33 @@ flowchart TD
 
 ## 🚀 Quick Install
 
+**One command** — works from any PowerShell session, auto-detects everything:
+
+```powershell
+irm https://raw.githubusercontent.com/martinpaprcka77/dotfiles-powershell/main/remote-install.ps1 | iex
+```
+
+From cmd.exe, bash, or any shell with a PowerShell host on PATH:
+```
+powershell -c "irm https://raw.githubusercontent.com/martinpaprcka77/dotfiles-powershell/main/remote-install.ps1 | iex"
+```
+
+`-WhatIf`/`-Force`/`-NoUpdates`/`-NoTerminal` aren't reachable through `iex` — use
+`$env:DOTFILES_FORCE=1` (etc.) before the command, or clone manually for full parameter parity:
+
 ```powershell
 git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/powershell
 ~/.config/powershell/install.ps1
 # Restart PowerShell → done
 ```
 
-**What `install.ps1` does:**
-1. Inject bootstrap into all 4 `$PROFILE` paths
+**What `install.ps1` does (either path ends up here):**
+1. Inject bootstrap into all 4 `$PROFILE` paths — at the real, Known-Folder-correct Documents
+   location, safe even when OneDrive redirects Documents elsewhere
 2. Add `~/Projects/tools/bin` to permanent `PATH`
 3. Offer Windows Terminal profile setup (via companion repo)
 
-**Idempotent** — safe to run multiple times. `-WhatIf` supported.
+**Idempotent** — safe to run multiple times. `-WhatIf` supported (direct invocation only).
 
 ---
 
@@ -93,11 +108,13 @@ git clone https://github.com/martinpaprcka77/dotfiles-powershell.git ~/.config/p
 ~/.config/powershell/
 ├── profile.ps1              ← main orchestrator
 ├── install.ps1              ← idempotent installer (-WhatIf, -Force, -NoUpdates)
+├── remote-install.ps1       ← one-command bootstrapper, safe via `irm | iex`
 ├── update.ps1               ← git pull + rebootstrap
 ├── bootstrap.ps1            ← snippet injected into $PROFILE
 ├── .gitignore
 ├── lib/
-│   └── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn, shared by install.ps1/update.ps1
+│   ├── output.ps1           ← Write-Step/Ok/Skip/Fail/Warn, shared by install.ps1/update.ps1
+│   └── paths.ps1            ← Resolve-DocumentsPath/Get-NativeProfilePaths (Known-Folder-correct)
 ├── core/
 │   ├── aliases.ps1          ← git, docker, kubectl shortcuts
 │   ├── functions.ps1        ← Edit-Profile, Reload-Profile, Get-SecretKey, mkcd
